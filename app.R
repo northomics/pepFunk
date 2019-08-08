@@ -183,8 +183,9 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   exp_data <- reactive({
-    if(is.null(input$file1))     
-    return(NULL) 
+    if (is.null(input$file1)) {
+      return(NULL)
+    }
     #req(input$file1)
     exp_data <- read.delim(input$file1, row.names = 1) %>% 
       as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
