@@ -187,22 +187,27 @@ server <- function(input, output, session) {
       return(NULL)
     }
     #req(input$file1)
-    exp_data <- read.delim(input$file1, row.names = 1) %>% 
-      as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
+    })
     
-    exp_data[exp_data==1] <-NA
+    #exp_data[exp_data==1] <-NA})
     ## only return something if there is an error
     #sapply(exp_data, is.numeric) #checking that all the intensity columns are numeric
-    cond <- colnames(exp_data) %>% substr(., 1, nchar(.)-1)
-    if(input$disp == "head") {
-      return(head(exp_data))
-    }
-    else {
-      return(exp_data)
-  }})
+    
+#    if(input$disp == "head") {
+#      return(head(exp_data)
+#    }
+#    else {
+#      return(exp_data)
+#  }
+#})
   
   output$contents <- renderTable({
-   return(exp_data())
+    exp_data <- read.delim('peptides.txt', row.names = 1) %>% 
+      as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
+    exp_data <- exp_data() 
+    exp_data[exp_data==1] <-NA
+    cond <- colnames(exp_data) %>% substr(., 1, nchar(.)-1)
+    return(exp_data)
     })
   
   output$heatmapPlot <- renderPlot({
