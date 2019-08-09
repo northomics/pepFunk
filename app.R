@@ -185,7 +185,7 @@ server <- function(input, output, session) {
   
   get_data<-reactive({
     
-    if(!exists(input$file1)) return() # if no upload
+    if (is.null(input$file1)) return(NULL) # if no upload
     exp_data <- read.delim(input$file1, row.names = 1) %>% 
            as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
     exp_data[exp_data==1] <-NA
