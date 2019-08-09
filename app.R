@@ -184,9 +184,11 @@ server <- function(input, output, session) {
   
   
   get_data<-reactive({
-    
-    if (is.null(input$file1)) return(NULL) # if no upload
-    exp_data <- read.delim(input$file1, row.names = 1) %>% 
+    inFile <- input$file1
+    if (is.null(inFile)) {
+      return(NULL)
+    } # if no upload
+    exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
            as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
     exp_data[exp_data==1] <-NA
     return(exp_data)
@@ -203,20 +205,12 @@ server <- function(input, output, session) {
   }
 })
   
- # output$contents <- renderTable({
- #   exp_data <- read.delim('peptides.txt', row.names = 1) %>% 
- #     as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
- #   exp_data <- exp_data() 
- #   exp_data[exp_data==1] <-NA
- #   cond <- colnames(exp_data) %>% substr(., 1, nchar(.)-1)
- #   return(exp_data)
- #   })
-  
 #  output$heatmapPlot <- renderPlot({
 #    # need to make this so the user can select the column
 #    ## need to make this more custom...
 #    ## Apply filtering
-#    exp_data = filter_valids(exp_data(),
+cond <- colnames(exp_data) %>% substr(., 1, nchar(.)-1)
+  #    exp_data = filter_valids(exp_data(),
 #                             conditions = c('DMSO', 'High', 'Low'),
 #                             min_count = c(2, 3, 2), #want peptide to have been identified in at least half of the samples 
 #                             at_least_one = TRUE)
