@@ -18,12 +18,12 @@ library(reshape2)
 ###########
 options(shiny.maxRequestSize=100*1024^2)
 # uncomment after debugging
-setwd("~/iclouddrive/Documents/shiny_apps/peptide-centric/")
+#setwd("~/iclouddrive/Documents/shiny_apps/peptide-centric/")
 
-    exp_data <- read.delim("peptides.txt", row.names=1) %>%
+#    exp_data <- read.delim("peptides.txt", row.names=1) %>%
     #exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
-           as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
-    exp_data[exp_data==1] <-NA
+#           as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
+#    exp_data[exp_data==1] <-NA
 ########
 # DATA # # should add files to this folder
 ########
@@ -186,24 +186,31 @@ ui <- fluidPage(
 # SERVER #
 ##########
 
+# https://rstudio.github.io/DT/ might want this for pretty output
 server <- function(input, output, session) {
   
   
-#  get_data<-reactive({
-#    inFile <- input$file1
-#    if (is.null(inFile)) {
-#      return(NULL)
-#    } # if no upload
-#    exp_data <- read.delim("peptides.txt", row.names=1) %>%
-#    #exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
-#           as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
-#    exp_data[exp_data==1] <-NA
-#    return(exp_data)
-#})
+  get_data<-reactive({
+    inFile <- input$file1
+    if (is.null(inFile)) {
+      return(NULL)
+    } # if no upload
+    exp_data <- read.delim("peptides.txt", row.names=1) %>%
+    #exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+           as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
+    exp_data[exp_data==1] <-NA
+    exp_data
+})
 
+  
+  
     
   output$contents <- renderTable({
- #   exp_data <- get_data()
+    exp_data <- get_data()
+    #exp_data <- read.delim("peptides.txt", row.names=1) %>%
+      #    #exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+    #            as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
+     #     exp_data[exp_data==1] <-NA
     if(input$disp == "head") {
       return(head(exp_data))
     }
@@ -211,17 +218,44 @@ server <- function(input, output, session) {
       return(exp_data)
   }
 })
-  
+ 
+  observe({
+    exp_data <- get_data()
+    cond <- colnames(exp_data) %>% substr(., 11, nchar(.)-2)
+    print(cond)
+    ### will need to uncomment 
+    #     exp_data = filter_valids(exp_data,
+    #       conditions = c('DMSO', 'High', 'Low'),
+    #       min_count = c(2, 3, 2), #want peptide to have been identified in at least half of the samples 
+    #       at_least_one = TRUE)
+        
+    #   print(head(exp_data)) 
+        ## intensities normalized by the proportion of functional annotation
+        ## if there are more than one functional annotation, the peptide will have a suffix added to the end (i.e. .1, .2, .3...etc)
+        ## $newpep_name
+  #      core_drug_kegg <- exp_data %>% as.data.frame() %>% 
+  #        rownames_to_column(., var='pep') %>%
+  #        merge(., core_pep_kegg, by='pep') %>% 
+  #        mutate(prop=replace(prop, is.na(prop), 1)) %>%
+  #        mutate_each(funs(.*prop), starts_with('Intensity')) %>% #multiplies the intensities by the proportion 
+  #        column_to_rownames(., var='newpep_name') %>%
+  #        dplyr::select(starts_with('Intensity')) 
+  #  
+  #  print(head(core_drug_kegg))
+  })
+   
   output$heatmapPlot <- renderPlot({
-    plot(rnorm(100))
+    if (is.null(get_data())) {
+      return()
+    }
     
   ## use this for help  
   #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
     #    # need to make this so the user can select the column
 #    ## need to make this more custom...
 #    ## Apply filtering
-#    exp_data <- get_data()  
-#    cond <- colnames(exp_data) %>% substr(., 1, nchar(.)-1)
+    exp_data <- get_data()  
+    cond <- colnames(exp_data) %>% substr(., 11, nchar(.)-2)
 ### will need to uncomment 
 #    # exp_data = filter_valids(exp_data,
 #    #   conditions = c('DMSO', 'High', 'Low'),
@@ -232,64 +266,78 @@ server <- function(input, output, session) {
 #    ## intensities normalized by the proportion of functional annotation
 #    ## if there are more than one functional annotation, the peptide will have a suffix added to the end (i.e. .1, .2, .3...etc)
 #    ## $newpep_name
-#    core_drug_kegg <- exp_data %>% as.data.frame() %>% 
-#      rownames_to_column(., var='pep') %>%
-#      merge(., core_pep_kegg, by='pep') %>% 
-#      mutate(prop=replace(prop, is.na(prop), 1)) %>%
-#      mutate_each(funs(.*prop), starts_with('Intensity')) %>% #multiplies the intensities by the proportion 
-#      column_to_rownames(., var='newpep_name') %>%
-#      dplyr::select(starts_with('Intensity'))
-#    
-#    ## logged and normalized data
-#    exp_data_kegg <- expression_data('kegg', exp_data)
-#  
-#    
-#    # applying function over our pathway list
-#    kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg') 
-#    ## shiny app has a UI, server function, then call to the shiny app...
-#    
-#    ## need to be able to change this
-#    control_cond <- "DMSO"
-#    ## make into a function
-#    gsva_kegg <- gsva(as.matrix(exp_data_kegg),kegg_genesets, min.sz=10,
-#                      kcdf='Gaussian') ## rnaseq=F because we have continuous data
-#    cond<- factor(cond) %>% relevel(control_cond) # DMSO is the control
-#    design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
-#    colnames(design)[1] <- c(control_cond) 
-#    colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
-#                                               nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
-#    fit <- lmFit(gsva_kegg, design)
-#    fit <- eBayes(fit, trend=T)
-#    allGeneSets <- topTable(fit, coef=2:ncol(design), number=Inf)
-#    DEgeneSets <- topTable(fit, coef=2:ncol(design), number=Inf,
-#                           p.value=0.05, adjust="BH")
-#    res <- decideTests(fit, p.value=0.05)
-#    sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
-#    ## hierarcical clustering of the drugs by kegg
-#    clusterdata <- colnames(gsva_kegg)[hclust(dist(gsva_kegg%>%t()))$order]
-#    
-#    ## only looking at significantly altered gene sets.
-#    #sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
-#    #  rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
-#    #sigpathways <- melt(sigpathways, id.vars='Pathway') %>% filter(value != 0) %>% dplyr::select(-value) %>%
-#    #  mutate(keep = rep("KEEP", nrow(.)))
-#    
-#    sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(DEgeneSets),]
-#    gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
-#      melt(., id='Pathway') 
-#    gsvaplot_data$condition <- substr(gsvaplot_data$variable, 1, nchar(as.character(gsvaplot_data$variable))-1)
-#    
-#    clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
-#    gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
-#    
-#    (highplot <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
-#       facet_grid(~ condition, switch = "x", scales = "free_x", space = "free_x") +
-#       scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
-#                            space = "Lab", name="GSVA enrichment score") + 
-#       geom_tile(na.rm = TRUE) +
-#       xlab(label = "Sample") +
-#       ylab(label="") +
-#       theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+    core_drug_kegg <- exp_data %>% as.data.frame() %>% 
+      rownames_to_column(., var='pep') %>%
+      merge(., core_pep_kegg, by='pep') %>% 
+      mutate(prop=replace(prop, is.na(prop), 1)) %>%
+      mutate_each(funs(.*prop), starts_with('Intensity')) %>% #multiplies the intensities by the proportion 
+      column_to_rownames(., var='newpep_name') %>%
+      dplyr::select(starts_with('Intensity'))
+  
+    norm_pep <- estimateSizeFactorsForMatrix(core_drug_kegg) 
+   #print(norm_pep)
+    #exp_data <- exp_data %>% mutate_all(funs(. / norm_pep))
+    exp_data <- sweep(as.matrix(core_drug_kegg), 2, norm_pep, "/")
+    print(exp_data %>% head())
+    peptides <- rownames(exp_data)
+    exp_data <- core_drug_kegg %>% #dplyr::select(starts_with('Intensity')) %>%
+          mutate_all(., funs(log(1 + .))) # %>% ##should be log10 data...
+    rownames(exp_data) <- peptides 
+    
+    
+    print(exp_data %>% head()) 
+    
+
+    
+    # applying function over our pathway list
+    kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg') 
+    ## shiny app has a UI, server function, then call to the shiny app...
+    
+    ## need to be able to change this
+    control_cond <- "DMSO"
+    ## make into a function
+    gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
+                      kcdf='Gaussian') ## rnaseq=F because we have continuous data
+
+    # not sure how to deal with this one
+    cond[13] <- "Low"
+    cond<- factor(cond) %>% relevel(control_cond) # DMSO is the control
+    design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
+    colnames(design)[1] <- c(control_cond) 
+    colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
+                                               nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
+    fit <- lmFit(gsva_kegg, design)
+    fit <- eBayes(fit, trend=T)
+    allGeneSets <- topTable(fit, coef=2:ncol(design), number=Inf)
+    DEgeneSets <- topTable(fit, coef=2:ncol(design), number=Inf,
+                           p.value=0.05, adjust="BH")
+    res <- decideTests(fit, p.value=0.05)
+    sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
+    ## hierarcical clustering of the drugs by kegg
+    clusterdata <- colnames(gsva_kegg)[hclust(dist(gsva_kegg%>%t()))$order]
+    
+    ## only looking at significantly altered gene sets.
+    #sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
+    #  rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
+    #sigpathways <- melt(sigpathways, id.vars='Pathway') %>% filter(value != 0) %>% dplyr::select(-value) %>%
+    #  mutate(keep = rep("KEEP", nrow(.)))
+    
+    sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(DEgeneSets),]
+    gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
+      melt(., id='Pathway') 
+    gsvaplot_data$condition <- substr(gsvaplot_data$variable, 1, nchar(as.character(gsvaplot_data$variable))-1)
+    
+    clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
+    gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
+    
+    (highplot <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
+       facet_grid(~ condition, switch = "x", scales = "free_x", space = "free_x") +
+       scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
+                            space = "Lab", name="GSVA enrichment score") + 
+       geom_tile(na.rm = TRUE) +
+       xlab(label = "Sample") +
+       ylab(label="") +
+       theme(axis.text.x = element_text(angle = 45, hjust = 1)))
   })
   
   #output$file_name <- renderText({ 
