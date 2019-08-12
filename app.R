@@ -17,7 +17,13 @@ library(reshape2)
 # Options #
 ###########
 options(shiny.maxRequestSize=100*1024^2)
+# uncomment after debugging
+setwd("~/iclouddrive/Documents/shiny_apps/peptide-centric/")
 
+    exp_data <- read.delim("peptides.txt", row.names=1) %>%
+    #exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+           as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
+    exp_data[exp_data==1] <-NA
 ########
 # DATA # # should add files to this folder
 ########
@@ -183,20 +189,21 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   
-  get_data<-reactive({
-    inFile <- input$file1
-    if (is.null(inFile)) {
-      return(NULL)
-    } # if no upload
-    exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
-           as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
-    exp_data[exp_data==1] <-NA
-    return(exp_data)
-})
+#  get_data<-reactive({
+#    inFile <- input$file1
+#    if (is.null(inFile)) {
+#      return(NULL)
+#    } # if no upload
+#    exp_data <- read.delim("peptides.txt", row.names=1) %>%
+#    #exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+#           as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
+#    exp_data[exp_data==1] <-NA
+#    return(exp_data)
+#})
 
     
   output$contents <- renderTable({
-    exp_data <- get_data()
+ #   exp_data <- get_data()
     if(input$disp == "head") {
       return(head(exp_data))
     }
@@ -206,36 +213,40 @@ server <- function(input, output, session) {
 })
   
   output$heatmapPlot <- renderPlot({
-    # need to make this so the user can select the column
-    ## need to make this more custom...
-    ## Apply filtering
-    exp_data <- get_data()   
-    cond <- colnames(exp_data) %>% substr(., 1, nchar(.)-1)
-## will need to uncomment 
-    # exp_data = filter_valids(exp_data,
-    #   conditions = c('DMSO', 'High', 'Low'),
-    #   min_count = c(2, 3, 2), #want peptide to have been identified in at least half of the samples 
-    #   at_least_one = TRUE)
+    plot(rnorm(100))
     
-    
-    ## intensities normalized by the proportion of functional annotation
-    ## if there are more than one functional annotation, the peptide will have a suffix added to the end (i.e. .1, .2, .3...etc)
-    ## $newpep_name
-    core_drug_kegg <- exp_data %>% as.data.frame() %>% 
-      rownames_to_column(., var='pep') %>%
-      merge(., core_pep_kegg, by='pep') %>% 
-      mutate(prop=replace(prop, is.na(prop), 1)) %>%
-      mutate_each(funs(.*prop), starts_with('Intensity')) %>% #multiplies the intensities by the proportion 
-      column_to_rownames(., var='newpep_name') %>%
-      dplyr::select(starts_with('Intensity'))
-    
-    ## logged and normalized data
-    exp_data_kegg <- expression_data('kegg', exp_data)
-  
-    
-    # applying function over our pathway list
-    kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg') 
-    ## shiny app has a UI, server function, then call to the shiny app...
+  ## use this for help  
+  #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
+    #    # need to make this so the user can select the column
+#    ## need to make this more custom...
+#    ## Apply filtering
+#    exp_data <- get_data()  
+#    cond <- colnames(exp_data) %>% substr(., 1, nchar(.)-1)
+### will need to uncomment 
+#    # exp_data = filter_valids(exp_data,
+#    #   conditions = c('DMSO', 'High', 'Low'),
+#    #   min_count = c(2, 3, 2), #want peptide to have been identified in at least half of the samples 
+#    #   at_least_one = TRUE)
+#    
+#    
+#    ## intensities normalized by the proportion of functional annotation
+#    ## if there are more than one functional annotation, the peptide will have a suffix added to the end (i.e. .1, .2, .3...etc)
+#    ## $newpep_name
+#    core_drug_kegg <- exp_data %>% as.data.frame() %>% 
+#      rownames_to_column(., var='pep') %>%
+#      merge(., core_pep_kegg, by='pep') %>% 
+#      mutate(prop=replace(prop, is.na(prop), 1)) %>%
+#      mutate_each(funs(.*prop), starts_with('Intensity')) %>% #multiplies the intensities by the proportion 
+#      column_to_rownames(., var='newpep_name') %>%
+#      dplyr::select(starts_with('Intensity'))
+#    
+#    ## logged and normalized data
+#    exp_data_kegg <- expression_data('kegg', exp_data)
+#  
+#    
+#    # applying function over our pathway list
+#    kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg') 
+#    ## shiny app has a UI, server function, then call to the shiny app...
 #    
 #    ## need to be able to change this
 #    control_cond <- "DMSO"
