@@ -161,12 +161,15 @@ ui <- fluidPage(
                  selected = "head"),
     
     tags$hr(),
-    
-    textInput("control_cond", h3("Control Condition"), 
-              value = "Name of control condition for plot"),
-    
-    textInput("other_cond", h3("Other Condition"), 
-              value = "Name of other condition for plot")
+
+    uiOutput("control_cond"),
+    uiOutput("other_cond")
+        
+#    textInput("control_cond", h3("Control Condition"), 
+#              value = "Name of control condition for plot"),
+#    
+#    textInput("other_cond", h3("Other Condition"), 
+#              value = "Name of other condition for plot")
     
   ), 
    
@@ -202,8 +205,6 @@ server <- function(input, output, session) {
     exp_data
 })
 
-  
-  
     
   output$contents <- renderTable({
     exp_data <- get_data()
@@ -218,37 +219,19 @@ server <- function(input, output, session) {
       return(exp_data)
   }
 })
- 
-  observe({
-    exp_data <- get_data()
-    cond <- colnames(exp_data) %>% substr(., 11, nchar(.)-2)
-    print(cond)
-    ### will need to uncomment 
-    #     exp_data = filter_valids(exp_data,
-    #       conditions = c('DMSO', 'High', 'Low'),
-    #       min_count = c(2, 3, 2), #want peptide to have been identified in at least half of the samples 
-    #       at_least_one = TRUE)
-        
-    #   print(head(exp_data)) 
-        ## intensities normalized by the proportion of functional annotation
-        ## if there are more than one functional annotation, the peptide will have a suffix added to the end (i.e. .1, .2, .3...etc)
-        ## $newpep_name
-  #      core_drug_kegg <- exp_data %>% as.data.frame() %>% 
-  #        rownames_to_column(., var='pep') %>%
-  #        merge(., core_pep_kegg, by='pep') %>% 
-  #        mutate(prop=replace(prop, is.na(prop), 1)) %>%
-  #        mutate_each(funs(.*prop), starts_with('Intensity')) %>% #multiplies the intensities by the proportion 
-  #        column_to_rownames(., var='newpep_name') %>%
-  #        dplyr::select(starts_with('Intensity')) 
-  #  
-  #  print(head(core_drug_kegg))
-  })
+
+  output$control_cond<- renderUI({
+  textInput("control_cond", h3("Control Condition"), 
+            value = "Name of control condition for plot")})
+  
+ output$other_cond <-  renderUI({
+   textInput("other_cond", h3("Other Condition"), 
+            value = "Name of other condition for plot")})
    
   output$heatmapPlot <- renderPlot({
     if (is.null(get_data())) {
       return()
     }
-    
   ## use this for help  
   #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
     #    # need to make this so the user can select the column
