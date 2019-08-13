@@ -5,6 +5,7 @@ library(DESeq2)
 library(GSVA)
 library(limma)
 library(reshape2)
+#library(DT)
 ###########
 ## TO DO ##
 ###########
@@ -18,7 +19,7 @@ library(reshape2)
 ###########
 options(shiny.maxRequestSize=100*1024^2)
 # uncomment after debugging
-#setwd("~/iclouddrive/Documents/shiny_apps/peptide-centric/")
+setwd("~/iclouddrive/Documents/shiny_apps/peptide-centric/")
 
 #    exp_data <- read.delim("peptides.txt", row.names=1) %>%
     #exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
@@ -49,6 +50,8 @@ core_pep_kegg$newpep_name <- make.names(core_pep_kegg$pep,unique=T) # update pep
 #############
 # FUNCTIONS #
 #############
+
+
 
 ## Remove peptides that are only sometimes identified...
 ## Data filtering function
@@ -163,7 +166,10 @@ ui <- fluidPage(
     tags$hr(),
 
     uiOutput("control_cond"),
-    uiOutput("other_cond")
+    uiOutput("other_cond"),
+    actionButton("go", "Plot"),
+    actionButton("reset", "Clear"), 
+    hr()
         
 #    textInput("control_cond", h3("Control Condition"), 
 #              value = "Name of control condition for plot"),
@@ -174,11 +180,15 @@ ui <- fluidPage(
   ), 
    
     mainPanel(
-      tableOutput("contents"),
-      plotOutput("heatmapPlot")
-#      textOutput("file_name")
-#      textOutput("min_max")
-    )
+      tabsetPanel(
+      tabPanel('Raw Data',
+      dataTableOutput("contents")),
+      
+      tabPanel('Heatmap',
+      plotOutput("heatmapPlot"),
+      textOutput('value1'))
+)
+)
 )
 )
 
@@ -192,32 +202,31 @@ ui <- fluidPage(
 # https://rstudio.github.io/DT/ might want this for pretty output
 server <- function(input, output, session) {
   
-  
+  ##################  
+  # reactive stuff #
+  ##################
   get_data<-reactive({
     inFile <- input$file1
     if (is.null(inFile)) {
       return(NULL)
     } # if no upload
-    exp_data <- read.delim("peptides.txt", row.names=1) %>%
-    #exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+   # exp_data <- read.delim("peptides.txt", row.names=1) %>%
+    exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
            as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
     exp_data[exp_data==1] <-NA
     exp_data
 })
 
-    
-  output$contents <- renderTable({
+
+  output$contents <- renderDataTable({
     exp_data <- get_data()
-    #exp_data <- read.delim("peptides.txt", row.names=1) %>%
-      #    #exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
-    #            as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
-     #     exp_data[exp_data==1] <-NA
-    if(input$disp == "head") {
-      return(head(exp_data))
-    }
-    else {
-      return(exp_data)
-  }
+  #  if(input$disp == "head") {
+  #    return(head(exp_data))
+  #  }
+  #  else {
+  #    return(exp_data)
+  #}
+    exp_data
 })
 
   output$control_cond<- renderUI({
@@ -227,7 +236,10 @@ server <- function(input, output, session) {
  output$other_cond <-  renderUI({
    textInput("other_cond", h3("Other Condition"), 
             value = "Name of other condition for plot")})
-   
+  
+ #eventReactive()
+ 
+  output$value1 <-   
   output$heatmapPlot <- renderPlot({
     if (is.null(get_data())) {
       return()
@@ -258,20 +270,12 @@ server <- function(input, output, session) {
       dplyr::select(starts_with('Intensity'))
   
     norm_pep <- estimateSizeFactorsForMatrix(core_drug_kegg) 
-   #print(norm_pep)
-    #exp_data <- exp_data %>% mutate_all(funs(. / norm_pep))
     exp_data <- sweep(as.matrix(core_drug_kegg), 2, norm_pep, "/")
-    print(exp_data %>% head())
     peptides <- rownames(exp_data)
     exp_data <- core_drug_kegg %>% #dplyr::select(starts_with('Intensity')) %>%
           mutate_all(., funs(log(1 + .))) # %>% ##should be log10 data...
     rownames(exp_data) <- peptides 
-    
-    
-    print(exp_data %>% head()) 
-    
 
-    
     # applying function over our pathway list
     kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg') 
     ## shiny app has a UI, server function, then call to the shiny app...
@@ -281,9 +285,9 @@ server <- function(input, output, session) {
     ## make into a function
     gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                       kcdf='Gaussian') ## rnaseq=F because we have continuous data
-
+    print(gsva_kegg %>% head())
     # not sure how to deal with this one
-    cond[13] <- "Low"
+    #cond[13] <- "Low"
     cond<- factor(cond) %>% relevel(control_cond) # DMSO is the control
     design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
     colnames(design)[1] <- c(control_cond) 
@@ -300,21 +304,23 @@ server <- function(input, output, session) {
     clusterdata <- colnames(gsva_kegg)[hclust(dist(gsva_kegg%>%t()))$order]
     
     ## only looking at significantly altered gene sets.
-    #sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
-    #  rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
+    sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
+      rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
     #sigpathways <- melt(sigpathways, id.vars='Pathway') %>% filter(value != 0) %>% dplyr::select(-value) %>%
     #  mutate(keep = rep("KEEP", nrow(.)))
     
-    sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(DEgeneSets),]
+    sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% sigpathways$Pathway,]
     gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
       melt(., id='Pathway') 
-    gsvaplot_data$condition <- substr(gsvaplot_data$variable, 1, nchar(as.character(gsvaplot_data$variable))-1)
-    
+    gsvaplot_data$condition <- substr(gsvaplot_data$variable, 11, nchar(as.character(gsvaplot_data$variable))-2)
+   
     clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
     gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
     
+    
+    ## something is wrong with the data...
     (highplot <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
-       facet_grid(~ condition, switch = "x", scales = "free_x", space = "free_x") +
+       facet_grid(~ condition, switch='x', scales = "free") +
        scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
                             space = "Lab", name="GSVA enrichment score") + 
        geom_tile(na.rm = TRUE) +
