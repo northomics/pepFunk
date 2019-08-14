@@ -17,7 +17,7 @@ library(reshape2)
 ###########
 # Options #
 ###########
-options(shiny.maxRequestSize=100*1024^2)
+options(shiny.maxRequestSize=125*1024^2)
 # uncomment after debugging
 setwd("~/iclouddrive/Documents/shiny_apps/peptide-centric/")
 
@@ -239,7 +239,13 @@ server <- function(input, output, session) {
   
  #eventReactive()
  
-  output$value1 <-   
+  control_condition <- reactive({
+    control_cond <- input$control_cond
+    if (is.null(control_cond)){
+      return(NULL)
+    }
+    control_cond
+  })
   output$heatmapPlot <- renderPlot({
     if (is.null(get_data())) {
       return()
@@ -250,7 +256,7 @@ server <- function(input, output, session) {
 #    ## need to make this more custom...
 #    ## Apply filtering
     exp_data <- get_data()  
-    cond <- colnames(exp_data) %>% substr(., 11, nchar(.)-2)
+    cond <- colnames(exp_data) %>% substr(., 11, nchar(.)-3)
 ### will need to uncomment 
 #    # exp_data = filter_valids(exp_data,
 #    #   conditions = c('DMSO', 'High', 'Low'),
@@ -281,14 +287,16 @@ server <- function(input, output, session) {
     ## shiny app has a UI, server function, then call to the shiny app...
     
     ## need to be able to change this
-    control_cond <- "DMSO"
+    control_cond <- control_condition()
     ## make into a function
     gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                       kcdf='Gaussian') ## rnaseq=F because we have continuous data
-    print(gsva_kegg %>% head())
+   
     # not sure how to deal with this one
     #cond[13] <- "Low"
+   print(cond) 
     cond<- factor(cond) %>% relevel(control_cond) # DMSO is the control
+    
     design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
     colnames(design)[1] <- c(control_cond) 
     colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
