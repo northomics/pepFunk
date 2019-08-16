@@ -232,9 +232,7 @@ server <- function(input,output,session)({
     }
   ## use this for help  
   #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
-    #    # need to make this so the user can select the column
-#    ## need to make this more custom...
-#    ## Apply filtering
+
     exp_data <- get_data()  
     removeintensity <- colnames(exp_data) %>% substr(., 11, nchar(.))
 ### will need to uncomment 
@@ -276,6 +274,7 @@ server <- function(input,output,session)({
     # not sure how to deal with this one
     
     new_conditions <- values$data
+    
     cond <- factor(new_conditions$Condition) %>% relevel(control_cond) # DMSO is the control
     #print(cond)
     design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
@@ -288,8 +287,8 @@ server <- function(input,output,session)({
     DEgeneSets <- topTable(fit, coef=2:ncol(design), number=Inf,
                            p.value=0.05, adjust="BH")
     res <- decideTests(fit, p.value=0.05)
-    print(res)
-    #sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
+    
+    sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
     
     
     ## hierarcical clustering of the drugs by kegg
@@ -304,7 +303,6 @@ server <- function(input,output,session)({
       sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
         rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
     } else {
-      print("too small")
       sigpathways <- as.data.frame(sigdrugs %>% abs())   
       sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
     }
