@@ -1,12 +1,15 @@
 library(rhandsontable)
 library(shiny)
+library(colourpicker)
+library(reshape2)
+library(DT)
 library(tidyverse)
 library(plyr)
 library(DESeq2)
 library(GSVA)
 library(limma)
-library(reshape2)
-library(DT)
+
+
 
 ###########
 ## TO DO ##
@@ -122,7 +125,12 @@ match_pathway <- function(df, annot_type){
     stop("Not an accepted functional annotation type.")}
 }
 
-
+# Function that produces default gg-colours is taken from this discussion:
+# https://stackoverflow.com/questions/8197559/emulate-ggplot2-default-color-palette
+gg_fill_hue <- function(n) {
+  hues = seq(15, 375, length = n + 1)
+  hcl(h = hues, l = 65, c = 100)[1:n]
+}
 
 ## tips
 ## source scripts, load libraries, and read datasets at the beginning of the script
@@ -137,10 +145,10 @@ match_pathway <- function(df, annot_type){
 
 
 ui <- shinyUI(fluidPage(
-  titlePanel("Testing"),
+  titlePanel("Peptide-centric GSVA workflow"),
   sidebarLayout(
     sidebarPanel(
-      fileInput("file1", "Choose CSV File",
+      fileInput("file1", "Choose peptide.txt MaxQuant output",
                 accept = c(
                   "text/csv",
                   "text/comma-separated-values,text/plain",
@@ -155,19 +163,25 @@ ui <- shinyUI(fluidPage(
                      "Auto" = "auto"), selected="manual"),
       
       tags$hr(),
-      actionButton("runButton","Update condition information"),
+      actionButton("runButton","Set condition information"),
       
-      actionButton("plotButton", "Run GSVA")
+      tags$hr(),
+      colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
+      colourInput("low_col", "Colour for low GSVA score", "#67A7C1")
+      #,
+      
+     # actionButton("plotButton", "Run GSVA")
     ),
     
     mainPanel(
       tabsetPanel(
-        tabPanel("OldData",
+        tabPanel("Sample information",
                  rHandsontableOutput('OldIris')),
-        tabPanel("NewData",
-                 DT::dataTableOutput("NewIris")),
+        #tabPanel("NewData",
+        #         DT::dataTableOutput("NewIris")),
         tabPanel("Heatmap", 
-                 plotOutput("heatmapPlot"))
+                 plotOutput("heatmapPlot")
+                 )
       )
     )
   )
@@ -226,7 +240,7 @@ server <- function(input,output,session)({
   #  datatable(values$data)
 # )}
     
-  output$heatmapPlot <- renderPlot({
+  get_plotdata <- reactive({
     if (is.null(get_data())) {
       return()
     }
@@ -316,13 +330,21 @@ server <- function(input,output,session)({
     
     clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
     gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
-    gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
-    
-    ## something is wrong with the data...
-    (highplot <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
+    gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA') 
+    return(gsvaplot_data)})
+  
+     
+ ## heatmapPlot now is its own separate thing, want to be able to push a button for this...
+ output$heatmapPlot <- renderPlot({
+      if (is.null(get_data())) {
+        return()
+      }
+   gsvaplot_data <- get_plotdata()
+        (highplot <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
        facet_grid(~ Condition, switch='x', scales = "free") +
-       scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
-                            space = "Lab", name="GSVA enrichment score") + 
+       #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
+      scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
+                                  space = "Lab", name="GSVA enrichment score") + 
        geom_tile(na.rm = TRUE) +
        xlab(label = "Sample") +
        ylab(label="") +
