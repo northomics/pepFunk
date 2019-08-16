@@ -211,9 +211,9 @@ server <- function(input,output,session)({
       samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
       x <- data.frame(Samples = samplenames) %>%
         mutate(Condition = case_when(
-          str_detect(Samples, input$control) ~ input$control,
-          str_detect(Samples, input$othercond) ~ input$othercond,
-          !(str_detect(Samples, input$control) | str_detect(Samples, input$othercond)) ~ "NA"))
+          str_detect(Samples, fixed(input$control, ignore_case = T)) ~ input$control,
+          str_detect(Samples, fixed(input$othercond, ignore_case = T)) ~ input$othercond,
+          !(str_detect(Samples, fixed(input$control, ignore_case = T)) | str_detect(Samples, fixed(input$othercond, ignore_case = T)))~ "NA"))
       rhandsontable(x) %>%
          hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
      } else {
