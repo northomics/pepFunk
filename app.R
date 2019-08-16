@@ -12,7 +12,7 @@ library(DT)
 ## TO DO ##
 ###########
 ## 1. separate functions from all other code 
-## 2. Rename "core_drug_kegg" to something more universal
+## 2. Rename "core_kegg" to something more universal
 ## 3. make conds/design more universal/customizable
 ## 4. only an option to find significance...
 
@@ -98,7 +98,7 @@ expression_data <- function(annotationtype, expr_df){
   } else if (annotationtype=='kegg'){
     norm_pep <- estimateSizeFactorsForMatrix(expr_df)
     exp_data <- sweep(expr_df, 2, norm_pep, "/") ##peptides are normalized
-    exp_data <- core_drug_kegg %>% #dplyr::select(starts_with('Intensity')) %>%
+    exp_data <- core_kegg %>% #dplyr::select(starts_with('Intensity')) %>%
       rownames_to_column(., var='peptide') %>% 
       mutate_each(., funs(log(1 + .)), starts_with('Intensity')) %>% ##should be log10 data...
       column_to_rownames(., var='peptide')
@@ -150,6 +150,10 @@ ui <- shinyUI(fluidPage(
       textInput("control", "Input control condition", "Enter text..."),
       textInput("othercond", "Input other condition", "Enter text..."),
       
+      radioButtons("format", "Manual or auto condition formatting?",
+                   c("Manual" = "manual",
+                     "Auto" = "auto"), selected="manual"),
+      
       tags$hr(),
       actionButton("runButton","Update condition information"),
       
@@ -186,16 +190,31 @@ server <- function(input,output,session)({
   values <- reactiveValues()
   
   output$OldIris <- renderRHandsontable({
+    condition_options <- c(input$control, input$othercond, "NA")
+   if (input$format == "auto"){
+     
+      exp_data <- get_data()
+      samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
+      x <- data.frame(Samples = samplenames) %>%
+        mutate(Condition = case_when(
+          str_detect(Samples, input$control) ~ input$control,
+          str_detect(Samples, input$othercond) ~ input$othercond,
+          is.na(Samples) ~ "NA"))
+      rhandsontable(x) %>%
+         hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+     } else {
+
    # rhandsontable(as.data.frame(iris))
     exp_data <- get_data()
-    condition_options <- c(input$control, input$othercond, "NA")
+    #condition_options <- c(input$control, input$othercond, "NA")
     #condition_options <- c("High", "DMSO", "NA")
     samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
     x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep("NA", length(samplenames))), 
                     stringsAsFactors = FALSE)
     rhandsontable(x) %>%
       hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
-    })
+    }
+  })
 
   
   observeEvent(input$runButton, {
@@ -228,7 +247,7 @@ server <- function(input,output,session)({
 #    ## intensities normalized by the proportion of functional annotation
 #    ## if there are more than one functional annotation, the peptide will have a suffix added to the end (i.e. .1, .2, .3...etc)
 #    ## $newpep_name
-    core_drug_kegg <- exp_data %>% as.data.frame() %>% 
+    core_kegg <- exp_data %>% as.data.frame() %>% 
       rownames_to_column(., var='pep') %>%
       merge(., core_pep_kegg, by='pep') %>% 
       mutate(prop=replace(prop, is.na(prop), 1)) %>%
@@ -236,11 +255,11 @@ server <- function(input,output,session)({
       column_to_rownames(., var='newpep_name') %>%
       dplyr::select(starts_with('Intensity'))
   
-    colnames(core_drug_kegg) <-  removeintensity
-    norm_pep <- estimateSizeFactorsForMatrix(core_drug_kegg) 
-    exp_data <- sweep(as.matrix(core_drug_kegg), 2, norm_pep, "/")
+    colnames(core_kegg) <-  removeintensity
+    norm_pep <- estimateSizeFactorsForMatrix(core_kegg) 
+    exp_data <- sweep(as.matrix(core_kegg), 2, norm_pep, "/")
     peptides <- rownames(exp_data)
-    exp_data <- core_drug_kegg %>% #dplyr::select(starts_with('Intensity')) %>%
+    exp_data <- core_kegg %>% #dplyr::select(starts_with('Intensity')) %>%
           mutate_all(., funs(log(1 + .))) # %>% ##should be log10 data...
     rownames(exp_data) <- peptides 
 
