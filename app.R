@@ -269,6 +269,7 @@ server <- function(input,output,session)({
     DEgeneSets <- topTable(fit, coef=2:ncol(design), number=Inf,
                            p.value=0.05, adjust="BH")
     res <- decideTests(fit, p.value=0.05)
+    print(res)
     sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
     ## hierarcical clustering of the drugs by kegg
     clusterdata <- colnames(gsva_kegg)[hclust(dist(gsva_kegg%>%t()))$order]
