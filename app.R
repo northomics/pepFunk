@@ -199,7 +199,7 @@ server <- function(input,output,session)({
         mutate(Condition = case_when(
           str_detect(Samples, input$control) ~ input$control,
           str_detect(Samples, input$othercond) ~ input$othercond,
-          is.na(Samples) ~ "NA"))
+          !(str_detect(Samples, input$control) | str_detect(Samples, input$othercond)) ~ "NA"))
       rhandsontable(x) %>%
          hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
      } else {
@@ -289,15 +289,25 @@ server <- function(input,output,session)({
                            p.value=0.05, adjust="BH")
     res <- decideTests(fit, p.value=0.05)
     print(res)
-    sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
+    #sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
+    
+    
     ## hierarcical clustering of the drugs by kegg
     clusterdata <- colnames(gsva_kegg)[hclust(dist(gsva_kegg%>%t()))$order]
     
     ## only looking at significantly altered gene sets.
-    sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
-      rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
+    #sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
+    # rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
     #sigpathways <- melt(sigpathways, id.vars='Pathway') %>% filter(value != 0) %>% dplyr::select(-value) %>%
     #  mutate(keep = rep("KEEP", nrow(.)))
+    if (ncol(sigdrugs %>% as.data.frame()) >= 2){
+      sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
+        rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
+    } else {
+      print("too small")
+      sigpathways <- as.data.frame(sigdrugs %>% abs())   
+      sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
+    }
     
     
     sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% sigpathways$Pathway,]
