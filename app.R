@@ -349,7 +349,10 @@ server <- function(input,output,session)({
        xlab(label = "Sample") +
        ylab(label="") +
        theme(axis.text.x = element_text(angle = 45, hjust = 1)))
-      })
+# download plot...look here for help
+   #   https://stackoverflow.com/questions/49977969/using-a-download-handler-to-save-ggplot-images-in-shiny  
+   
+    })
  })
 
 
