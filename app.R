@@ -180,7 +180,8 @@ ui <- shinyUI(fluidPage(
         #tabPanel("NewData",
         #         DT::dataTableOutput("NewIris")),
         tabPanel("Heatmap", 
-                 plotOutput("heatmapPlot")
+                 plotOutput("heatmapPlot"),
+                 downloadButton('downloadPlot','Download Plot')
                  )
       )
     )
@@ -340,7 +341,7 @@ server <- function(input,output,session)({
         return()
       }
    gsvaplot_data <- get_plotdata()
-        (highplot <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
+       values$plot <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
        facet_grid(~ Condition, switch='x', scales = "free") +
        #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
       scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
@@ -348,11 +349,17 @@ server <- function(input,output,session)({
        geom_tile(na.rm = TRUE) +
        xlab(label = "Sample") +
        ylab(label="") +
-       theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+       values$plot
 # download plot...look here for help
    #   https://stackoverflow.com/questions/49977969/using-a-download-handler-to-save-ggplot-images-in-shiny  
    
     })
+ 
+    output$downloadPlot <- downloadHandler(
+     filename = function(){paste("input$heatmapPlot",'.png',sep='')},
+     content = function(file){
+     ggsave(file,plot=values$plot)
  })
 
 
