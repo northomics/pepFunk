@@ -23,8 +23,14 @@ library(limma)
 # Options #
 ###########
 options(shiny.maxRequestSize=125*1024^2)
+options(stringsAsFactors = FALSE)
+
+# batch effect correction
+#source('remove_batcheffect_modified_functions.R')
+
 # uncomment after debugging
-setwd("~/iclouddrive/Documents/shiny_apps/peptide-centric/")
+#setwd("~/iclouddrive/Documents/shiny_apps/peptide-centric/")
+
 
 #    exp_data <- read.delim("peptides.txt", row.names=1) %>%
 #exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
@@ -167,7 +173,9 @@ ui <- shinyUI(fluidPage(
       
       tags$hr(),
       colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
-      colourInput("low_col", "Colour for low GSVA score", "#67A7C1")
+      colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
+      actionButton('genplot', 'Generate results and update colours'),
+                 downloadButton('downloadPlot','Download Plot')
       #,
       
      # actionButton("plotButton", "Run GSVA")
@@ -180,9 +188,8 @@ ui <- shinyUI(fluidPage(
         #tabPanel("NewData",
         #         DT::dataTableOutput("NewIris")),
         tabPanel("Heatmap", 
-                 plotOutput("heatmapPlot"),
-                 actionButton('genplot', 'Generate results and update colours'),
-                 downloadButton('downloadPlot','Download Plot')
+                 plotOutput("heatmapPlot")
+                 
                  )
       )
     )
@@ -355,13 +362,16 @@ observeEvent(input$genplot,{
    #   https://stackoverflow.com/questions/49977969/using-a-download-handler-to-save-ggplot-images-in-shiny  
   
  
- output$heatmapPlot <- renderPlot({values$plot})
+ output$heatmapPlot <- renderPlot({values$plot}, height='auto')
+ 
  output$downloadPlot <- downloadHandler(
-   filename = function(){paste('heatmap','.png',sep='')},
+   filename = function(){
+     paste('heatmapPlot','.png',sep='')
+     }, 
    content = function(file){
-   ggsave(file,plot=data$plot)
-     
-})
+   ggsave(file,plot=values$plot)
+     }
+   )
   })
 
 
