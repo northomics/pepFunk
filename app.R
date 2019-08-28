@@ -1,5 +1,6 @@
 library(rhandsontable)
 library(shiny)
+library(shinyWidgets)
 library(colourpicker)
 library(reshape2)
 library(DT)
@@ -180,9 +181,8 @@ ui <- shinyUI(fluidPage(
       
       tags$hr(),
       colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
-      colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
-      actionButton('genplot', 'Generate results and update colours'),
-                 downloadButton('downloadPlot','Download Plot')
+      colourInput("low_col", "Colour for low GSVA score", "#67A7C1")
+      
       #,
       
      # actionButton("plotButton", "Run GSVA")
@@ -193,9 +193,28 @@ ui <- shinyUI(fluidPage(
         tabPanel("Sample information",
                  rHandsontableOutput('OldIris')),
         tabPanel("PCA",
-                 plotOutput("pcaPlot")),
+                 plotOutput("pcaPlot"),
+                 
+                 # probably want to be able to chose PCs
+                 fluidRow(
+                   column(6, wellPanel(actionBttn('genplotpca', label='Generate/update plot', color='success', style = 'jelly'),
+                                        
+                                        #actionButton('genplotpca', 'Generate PCA biplot and update colours'),
+                                        downloadButton('dlPCA', 'Download PCA biplot')
+                                        ),
+                   column(6, wellPanel(
+                     selectInput("variable", "Variable:",
+                                 c("Cylinders" = "cyl",
+                                   "Transmission" = "am",
+                                   "Gears" = "gear")
+                   ))))
+        )
+                 
+                ),
         tabPanel("Heatmap", 
-                 plotOutput("heatmapPlot"))
+                 plotOutput("heatmapPlot"),
+                 actionButton('genplotheat', 'Generate heatmap and update colours'),
+                 downloadButton('downloadPlot','Download heatmap'))
      
       )
     )
@@ -298,13 +317,9 @@ server <- function(input,output,session)({
     peptides <- rownames(exp_data)
     exp_data <- core_kegg %>% #dplyr::select(starts_with('Intensity')) %>%
           mutate_all(., funs(log(1 + .))) # %>% ##should be log10 data...
-    rownames(exp_data) <- peptides })
+    rownames(exp_data) <- peptides
 
-heatmap_data <- reactive({
-  if (is.null(get_data())) {
-    return()
-  }
-  exp_data <- get_plotdata()
+
     # applying function over our pathway list
     kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg') 
     ## shiny app has a UI, server function, then call to the shiny app...
@@ -314,9 +329,6 @@ heatmap_data <- reactive({
     ## make into a function
     gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                       kcdf='Gaussian') ## rnaseq=F because we have continuous data
-   
-    # not sure how to deal with this one
-    
     new_conditions <- values$data
     
     cond <- factor(new_conditions$Condition) %>% relevel(control_cond) # DMSO is the control
@@ -337,7 +349,7 @@ heatmap_data <- reactive({
     
     ## hierarcical clustering of the drugs by kegg
     clusterdata <- colnames(gsva_kegg)[hclust(dist(gsva_kegg%>%t()))$order]
-    print("MADEIT")
+   
     ## only looking at significantly altered gene sets.
     #sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
     # rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
@@ -361,12 +373,14 @@ heatmap_data <- reactive({
     clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
     gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
     gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA') 
-    return(gsvaplot_data)})
+    #return(gsvaplot_data)
+    list(exp_data = exp_data, gsva = gsvaplot_data)
+    })
   
      
  ## heatmapPlot now is its own separate thing, want to be able to push a button for this...
-observeEvent(input$genplot,{
-  values$plot <- ggplot(data = heatmap_data(), mapping = aes(x = variable, y = Pathway, fill = value)) + 
+observeEvent(input$genplotheat,{
+  values$plotheat <- ggplot(data = get_plotdata()[['gsva']], mapping = aes(x = variable, y = Pathway, fill = value)) + 
        facet_grid(~ Condition, switch='x', scales = "free") +
        #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
       scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
@@ -376,19 +390,48 @@ observeEvent(input$genplot,{
        ylab(label="") +
        theme(axis.text.x = element_text(angle = 45, hjust = 1))
  }) 
-       #return(heatplot)
-# download plot...look here for help
-   #   https://stackoverflow.com/questions/49977969/using-a-download-handler-to-save-ggplot-images-in-shiny  
-  
+
+observeEvent(input$genplotpca, {
+  log_exp <- get_plotdata()[['exp_data']]
+  new_conditions <- values$data # getting the condition data from user's manual input
+  pca<- prcomp(t(log_exp), center=T, scale=F)
+  sampleVals<-data.frame(pca$x)
+  exprVals<-data.frame(pca$rotation)
+  PoV <- (pca$sdev^2/sum(pca$sdev^2))*100
+  # Make is so that it loops through all possibilities
+  #for (i in length(PoV)){
+  #  
+  #}
+  PC1per <- paste0("(", round(PoV[1],2), "%)")
+  PC2per <- paste0("(", round(PoV[2],2), "%)")
+  PC3per <- paste0("(", round(PoV[3],2), "%)")
+  PC4per <- paste0("(", round(PoV[4],2), "%)")
+  # need to make this more general
+  coords<-data.frame(sampleVals, condition = new_conditions,
+                     samplename = rownames(sampleVals))
+  #print(coords)
+  values$plotpca <- ggplot(coords, aes(x = PC1, y = PC2)) +
+      #coord_cartesian(xlim=c(-2,2), ylim=c(-2,2)) +# data that you want to plot
+      geom_point(size=3, aes(fill=condition.Condition, shape=condition.Condition)) + 
+      stat_ellipse(geom = "polygon", alpha=.2, aes(color=condition.Condition, fill=condition.Condition)) +
+      scale_color_manual(values=c("#67A7C1", "#FF6F59", "#292F36")) +
+      scale_fill_manual(values=c("#67A7C1", "#FF6F59", "#292F36")) +
+      scale_shape_manual(values=c(22, 21, 24)) +
+      scale_x_continuous(name=paste("PC1", PC1per)) +
+      scale_y_continuous(name=paste("PC2", PC2per)) +
+      theme(legend.position = "bottom") 
  
- output$heatmapPlot <- renderPlot({values$plot}, height='auto')
- 
+}) 
+
+
+ output$heatmapPlot <- renderPlot({values$plotheat}, height='auto')
+ output$pcaPlot <- renderPlot({values$plotpca}, height='auto')
  output$downloadPlot <- downloadHandler(
    filename = function(){
      paste('heatmapPlot','.png',sep='')
      }, 
    content = function(file){
-   ggsave(file,plot=values$plot)
+   ggsave(file,plot=values$plotheat)
      }
    )
   })
