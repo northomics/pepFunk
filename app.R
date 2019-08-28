@@ -164,10 +164,17 @@ ui <- shinyUI(fluidPage(
       textInput("control", "Input control condition", "Enter text..."),
       textInput("othercond", "Input other condition", "Enter text..."),
       
+      conditionalPanel(
+        condition = "input.moreconditions == 'yes'",
+        textInput("othercond2", "Input other condition", "Enter text...")),
+   
+      radioButtons("moreconditions", "Do you have more conditions?",
+                   c("Yes" = "yes",
+                     "No" = "no"), selected="no"), 
+       
       radioButtons("format", "Manual or auto condition formatting?",
                    c("Manual" = "manual",
                      "Auto" = "auto"), selected="manual"),
-      
       tags$hr(),
       actionButton("runButton","Set condition information"),
       
@@ -185,12 +192,11 @@ ui <- shinyUI(fluidPage(
       tabsetPanel(
         tabPanel("Sample information",
                  rHandsontableOutput('OldIris')),
-        #tabPanel("NewData",
-        #         DT::dataTableOutput("NewIris")),
+        tabPanel("PCA",
+                 plotOutput("pcaPlot")),
         tabPanel("Heatmap", 
-                 plotOutput("heatmapPlot")
-                 
-                 )
+                 plotOutput("heatmapPlot"))
+     
       )
     )
   )
@@ -213,7 +219,11 @@ server <- function(input,output,session)({
   values <- reactiveValues()
   
   output$OldIris <- renderRHandsontable({
-    condition_options <- c(input$control, input$othercond, "NA")
+    if (input$moreconditions=='yes') {
+      condition_options <- c(input$control, input$othercond, input$othercond2, "NA")
+    } else {
+      condition_options <- c(input$control, input$othercond, "NA") 
+    }
    if (input$format == "auto"){
      
       exp_data <- get_data()
@@ -222,6 +232,7 @@ server <- function(input,output,session)({
         mutate(Condition = case_when(
           str_detect(Samples, fixed(input$control, ignore_case = T)) ~ input$control,
           str_detect(Samples, fixed(input$othercond, ignore_case = T)) ~ input$othercond,
+          str_detect(Samples, fixed(input$othercond2, ignore_case = T)) ~ input$othercond2,
           !(str_detect(Samples, fixed(input$control, ignore_case = T)) | str_detect(Samples, fixed(input$othercond, ignore_case = T)))~ "NA"))
       rhandsontable(x) %>%
          hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
@@ -245,9 +256,14 @@ server <- function(input,output,session)({
   })
   
   
-  #output$NewIris <- DT::renderDataTable({
-  #  datatable(values$data)
-# )}
+## Maybe we should make a single reactive for "normal" data manipulation    
+#  pca_data <- reactive({
+#    if (is.null(get_data())) {
+#      return()
+#    }
+#    exp_data <- get_data()
+#    })
+  
     
   get_plotdata <- reactive({
     if (is.null(get_data())) {
@@ -282,8 +298,13 @@ server <- function(input,output,session)({
     peptides <- rownames(exp_data)
     exp_data <- core_kegg %>% #dplyr::select(starts_with('Intensity')) %>%
           mutate_all(., funs(log(1 + .))) # %>% ##should be log10 data...
-    rownames(exp_data) <- peptides 
+    rownames(exp_data) <- peptides })
 
+heatmap_data <- reactive({
+  if (is.null(get_data())) {
+    return()
+  }
+  exp_data <- get_plotdata()
     # applying function over our pathway list
     kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg') 
     ## shiny app has a UI, server function, then call to the shiny app...
@@ -316,7 +337,7 @@ server <- function(input,output,session)({
     
     ## hierarcical clustering of the drugs by kegg
     clusterdata <- colnames(gsva_kegg)[hclust(dist(gsva_kegg%>%t()))$order]
-    
+    print("MADEIT")
     ## only looking at significantly altered gene sets.
     #sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
     # rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
@@ -344,10 +365,8 @@ server <- function(input,output,session)({
   
      
  ## heatmapPlot now is its own separate thing, want to be able to push a button for this...
-
-       #gsvaplot_data <- get_plotdata()
 observeEvent(input$genplot,{
-  values$plot <- ggplot(data = get_plotdata(), mapping = aes(x = variable, y = Pathway, fill = value)) + 
+  values$plot <- ggplot(data = heatmap_data(), mapping = aes(x = variable, y = Pathway, fill = value)) + 
        facet_grid(~ Condition, switch='x', scales = "free") +
        #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
       scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
