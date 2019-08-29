@@ -192,7 +192,12 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                           downloadButton('dlPCA', 'Download PCA biplot')
                           ),
                  
-                 tabPanel("Functional enrichment heatmap")
+                 tabPanel("Functional enrichment heatmap",
+                          plotOutput("heatmapPlot"),
+                          colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
+                          colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
+                          actionButton('genplotheat', 'Generate heatmap and update colours'),
+                          downloadButton('downloadPlot','Download heatmap'))
 )
 
 server <- function(input,output,session)({
@@ -391,13 +396,11 @@ server <- function(input,output,session)({
     print(numPCs)
     ## dropdown for selecting which PC we want to plot
     
-    output$y_axisPC <- renderUI({
-      selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
-                  choices = as.list(numPCs),
-                  selected = "PC2")
-    })
-    list(coords = coords, PoV = PoV)
+    list(coords = coords, PoV = PoV, numPCs = numPCs)
   })
+  
+
+    
   ## heatmapPlot now is its own separate thing, want to be able to push a button for this...
   observeEvent(input$genplotheat,{
     values$plotheat <- ggplot(data = get_plotdata()[['gsva']], mapping = aes(x = variable, y = Pathway, fill = value)) + 
@@ -411,18 +414,28 @@ server <- function(input,output,session)({
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
   }) 
   
+  
+  
   observeEvent(input$genplotpca, {
     coords <- pca_plotdata()[['coords']]
     PoV <- pca_plotdata()[['PoV']]
+    numPCs <- pca_plotdata()[['numPCs']]
+    output$y_axisPC <- renderUI({
+      selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+                  choices = as.list(numPCs),
+                  selected = "PC2")
+    })
     PC1per <- paste0("(", round(PoV[1],2), "%)")
     PC2per <- paste0("(", round(PoV[2],2), "%)")
     PC3per <- paste0("(", round(PoV[3],2), "%)")
     PC4per <- paste0("(", round(PoV[4],2), "%)")
-    if (is.null(input$y_axisPC)){
-      yaxis <- "PC2"
-    } else {
-      yaxis <- input$y_axisPC
-    }
+    #if (is.null(input$y_axisPC)){
+    #  yaxis <- "PC2"
+    #} else {
+    #yaxis <- input$y_axisPC
+    yaxis <- "PC2"
+    print(yaxis)
+    #}
     values$plotpca <- ggplot(coords, aes_string(x = "PC1", y = yaxis)) + #almost... how do you accept selectInput for ggplot?
       #coord_cartesian(xlim=c(-2,2), ylim=c(-2,2)) +# data that you want to plot
       geom_point(size=3, aes_string(fill="condition.Condition", shape="condition.Condition")) + 
@@ -436,6 +449,7 @@ server <- function(input,output,session)({
     
   }) 
   
+ 
   
   output$heatmapPlot <- renderPlot({values$plotheat}, height='auto')
   output$pcaPlot <- renderPlot({values$plotpca}, height='auto')
