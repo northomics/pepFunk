@@ -148,81 +148,80 @@ gg_fill_hue <- function(n) {
 
 ## place all code shiny must rerun inside of the render function.
 ## shiny will rerun all the code in a render chunk each time a user changes a widget...
-
-
-
-ui <- shinyUI(fluidPage(
-  titlePanel("Peptide-centric GSVA workflow"),
-  sidebarLayout(
-    sidebarPanel(
-      fileInput("file1", "Choose peptide.txt MaxQuant output",
-                accept = c(
-                  "text/csv",
-                  "text/comma-separated-values,text/plain",
-                  ".csv")
-      ),
-      ## horizontal line
-      textInput("control", "Input control condition", "Enter text..."),
-      textInput("othercond", "Input other condition", "Enter text..."),
-      
-      conditionalPanel(
-        condition = "input.moreconditions == 'yes'",
-        textInput("othercond2", "Input other condition", "Enter text...")),
-   
-      radioButtons("moreconditions", "Do you have more conditions?",
-                   c("Yes" = "yes",
-                     "No" = "no"), selected="no"), 
-       
-      radioButtons("format", "Manual or auto condition formatting?",
-                   c("Manual" = "manual",
-                     "Auto" = "auto"), selected="manual"),
-      tags$hr(),
-      actionButton("runButton","Set condition information"),
-      
-      tags$hr(),
-      colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
-      colourInput("low_col", "Colour for low GSVA score", "#67A7C1")
-      
-      #,
-      
-     # actionButton("plotButton", "Run GSVA")
-    ),
-    
-    mainPanel(
-      tabsetPanel(
-        tabPanel("Sample information",
-                 rHandsontableOutput('OldIris')),
-        tabPanel("PCA",
-                 plotOutput("pcaPlot"),
+ui <- navbarPage("Peptide-centric metaproteomic workflow",
+                
+                  tabPanel("Data setup",
+                           fluidRow(
+                             column(4, h3("Peptide data input"),
+                                    
+                                    fileInput("file1", "Choose peptide.txt MaxQuant output",
+                                              accept = c(
+                                                "text/csv",
+                                                "text/comma-separated-values,text/plain",
+                                                ".csv"),
+                                    ),
+                                    
+                                    #horizontal line
+                                    tags$hr(),
+                                    textInput("control", "Input control condition", "Control"),
+                                    textInput("othercond", "Input other condition", "Condition"),
+                                    conditionalPanel(
+                                      condition = "input.moreconditions == 'yes'",
+                                      textInput("othercond2", "Input other condition", "Other condition")),
+                                    radioButtons("moreconditions", "Do you have more conditions?",
+                                                 c("Yes" = "yes",
+                                                   "No" = "no"), selected="no"),
+                                    #allow additional conditions, get this working after...
+                                    #actionButton("addcond", "Add additional condition"), actionButton("rmvcond", "Remove added condition"), # these are ugly
+                              
+                                    
+                                    radioButtons("format", "Manual or auto condition formatting?",
+                                                 c("Manual" = "manual",
+                                                   "Auto" = "auto"), selected="manual"),
+                                    tags$hr(),
+                                    actionButton("runButton","Set condition information")
+                                    ),
+                             column(8, h3("Editing sample names and conditions"),
+                                             rHandsontableOutput('OriData'))
+                           )),
                  
-                 # probably want to be able to chose PCs
-                # fluidRow(
-                 #actionBttn('genplotpca', label='Generate/update plot', color='success', style = 'jelly'),
-                                        
-                   actionButton('genplotpca', 'Generate PCA biplot and update colours'),
-                   downloadButton('dlPCA', 'Download PCA biplot'),
-                   uiOutput("y_axisPC")
-                 #  )
-        )
+                 tabPanel("PCA",
+                          plotOutput("pcaPlot"),
+                          uiOutput("y_axisPC"),
+                          actionButton('genplotpca', 'Generate PCA biplot and update colours'),
+                          downloadButton('dlPCA', 'Download PCA biplot')
+                          ),
                  
-                ),
-        tabPanel("Heatmap", 
-                 plotOutput("heatmapPlot"),
-                 actionButton('genplotheat', 'Generate heatmap and update colours'),
-                 downloadButton('downloadPlot','Download heatmap'))
-     
-      )
-    )
-  )
+                 tabPanel("Functional enrichment heatmap")
 )
 
 server <- function(input,output,session)({
+#### renderUI 
+  ## allow additional conditions, for adding and removing...
+#  observeEvent(input$addcond, {
+#    insertUI(
+#      selector = "#addcond",
+#      where = "beforeBegin",
+#      ui = textInput(paste0("txt", input$add),
+#                     "Additional condition")
+#    )
+#  })
+#  ## allow removal of added condition
+#  observeEvent(input$rmvcond, {
+#    removeUI(
+#      selector = "div:has(> #txt)"
+#    )
+#  })  
   
-  get_data<-reactive({
+  get_data <- reactive({
     inFile <- input$file1
-    if (is.null(inFile)) {
-      return(NULL)
-    } # if no upload
+    validate(
+      need(inFile != "", "Please upload a dataset")
+    )
+    
+    #if (is.null(inFile)) {
+    #  return(NULL)
+    #} # if no upload
     # exp_data <- read.delim("peptides.txt", row.names=1) %>%
     exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
       as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
@@ -230,16 +229,16 @@ server <- function(input,output,session)({
     exp_data
   })
   
+  
   values <- reactiveValues()
   
-  output$OldIris <- renderRHandsontable({
+  output$OriData <- renderRHandsontable({
     if (input$moreconditions=='yes') {
       condition_options <- c(input$control, input$othercond, input$othercond2, "NA")
     } else {
       condition_options <- c(input$control, input$othercond, "NA") 
     }
-   if (input$format == "auto"){
-     
+    if (input$format == "auto"){
       exp_data <- get_data()
       samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
       x <- data.frame(Samples = samplenames) %>%
@@ -249,55 +248,55 @@ server <- function(input,output,session)({
           str_detect(Samples, fixed(input$othercond2, ignore_case = T)) ~ input$othercond2,
           !(str_detect(Samples, fixed(input$control, ignore_case = T)) | str_detect(Samples, fixed(input$othercond, ignore_case = T)))~ "NA"))
       rhandsontable(x) %>%
-         hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
-     } else {
-
-   # rhandsontable(as.data.frame(iris))
-    exp_data <- get_data()
-    #condition_options <- c(input$control, input$othercond, "NA")
-    #condition_options <- c("High", "DMSO", "NA")
-    samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
-    x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep("NA", length(samplenames))), 
-                    stringsAsFactors = FALSE)
-    rhandsontable(x) %>%
-      hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+    } else {
+      
+      # rhandsontable(as.data.frame(iris))
+      exp_data <- get_data()
+      #condition_options <- c(input$control, input$othercond, "NA")
+      #condition_options <- c("High", "DMSO", "NA")
+      samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
+      x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep("NA", length(samplenames))), 
+                      stringsAsFactors = FALSE)
+      rhandsontable(x) %>%
+        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
     }
   })
-
+  
   
   observeEvent(input$runButton, {
-    values$data <-  hot_to_r(input$OldIris)
+    values$data <-  hot_to_r(input$OriData)
   })
   
   
-## Maybe we should make a single reactive for "normal" data manipulation    
-#  pca_data <- reactive({
-#    if (is.null(get_data())) {
-#      return()
-#    }
-#    exp_data <- get_data()
-#    })
+  ## Maybe we should make a single reactive for "normal" data manipulation    
+  #  pca_data <- reactive({
+  #    if (is.null(get_data())) {
+  #      return()
+  #    }
+  #    exp_data <- get_data()
+  #    })
   
-    
+  
   get_plotdata <- reactive({
     if (is.null(get_data())) {
       return()
     }
-  ## use this for help  
-  #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
-
+    ## use this for help  
+    #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
+    
     exp_data <- get_data()  
     removeintensity <- colnames(exp_data) %>% substr(., 11, nchar(.))
-### will need to uncomment 
-#    # exp_data = filter_valids(exp_data,
-#    #   conditions = c('DMSO', 'High', 'Low'),
-#    #   min_count = c(2, 3, 2), #want peptide to have been identified in at least half of the samples 
-#    #   at_least_one = TRUE)
-#    
-#    
-#    ## intensities normalized by the proportion of functional annotation
-#    ## if there are more than one functional annotation, the peptide will have a suffix added to the end (i.e. .1, .2, .3...etc)
-#    ## $newpep_name
+    ### will need to uncomment 
+    #    # exp_data = filter_valids(exp_data,
+    #    #   conditions = c('DMSO', 'High', 'Low'),
+    #    #   min_count = c(2, 3, 2), #want peptide to have been identified in at least half of the samples 
+    #    #   at_least_one = TRUE)
+    #    
+    #    
+    #    ## intensities normalized by the proportion of functional annotation
+    #    ## if there are more than one functional annotation, the peptide will have a suffix added to the end (i.e. .1, .2, .3...etc)
+    #    ## $newpep_name
     core_kegg <- exp_data %>% as.data.frame() %>% 
       rownames_to_column(., var='pep') %>%
       merge(., core_pep_kegg, by='pep') %>% 
@@ -305,16 +304,16 @@ server <- function(input,output,session)({
       mutate_each(funs(.*prop), starts_with('Intensity')) %>% #multiplies the intensities by the proportion 
       column_to_rownames(., var='newpep_name') %>%
       dplyr::select(starts_with('Intensity'))
-  
+    
     colnames(core_kegg) <-  removeintensity
     norm_pep <- estimateSizeFactorsForMatrix(core_kegg) 
     exp_data <- sweep(as.matrix(core_kegg), 2, norm_pep, "/")
     peptides <- rownames(exp_data)
     exp_data <- core_kegg %>% #dplyr::select(starts_with('Intensity')) %>%
-          mutate_all(., funs(log(1 + .))) # %>% ##should be log10 data...
+      mutate_all(., funs(log(1 + .))) # %>% ##should be log10 data...
     rownames(exp_data) <- peptides
-
-
+    
+    
     # applying function over our pathway list
     kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg') 
     ## shiny app has a UI, server function, then call to the shiny app...
@@ -344,7 +343,7 @@ server <- function(input,output,session)({
     
     ## hierarcical clustering of the drugs by kegg
     clusterdata <- colnames(gsva_kegg)[hclust(dist(gsva_kegg%>%t()))$order]
-   
+    
     ## only looking at significantly altered gene sets.
     #sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
     # rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
@@ -363,82 +362,93 @@ server <- function(input,output,session)({
     gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
       melt(., id='Pathway') %>%
       merge(., new_conditions, by.x='variable', by.y = 'Samples')
-            
+    
     
     clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
     gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
     gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA') 
     #return(gsvaplot_data)
     list(exp_data = exp_data, gsva = gsvaplot_data)
-    })
+  })
   
-     
- ## heatmapPlot now is its own separate thing, want to be able to push a button for this...
-observeEvent(input$genplotheat,{
-  values$plotheat <- ggplot(data = get_plotdata()[['gsva']], mapping = aes(x = variable, y = Pathway, fill = value)) + 
-       facet_grid(~ Condition, switch='x', scales = "free") +
-       #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
+  pca_plotdata <- reactive({
+    log_exp <- get_plotdata()[['exp_data']]
+    new_conditions <- values$data # getting the condition data from user's manual input
+    pca<- prcomp(t(log_exp), center=T, scale=F)
+    sampleVals<-data.frame(pca$x)
+    exprVals<-data.frame(pca$rotation)
+    PoV <- (pca$sdev^2/sum(pca$sdev^2))*100
+    
+    # Make is so that it loops through all possibilities
+    #for (i in length(PoV)){
+    #  
+    #}
+    
+    # need to make this more general
+    coords<-data.frame(sampleVals, condition = new_conditions,
+                       samplename = rownames(sampleVals))
+    numPCs <- paste0("PC", 1:length(PoV))
+    print(numPCs)
+    ## dropdown for selecting which PC we want to plot
+    
+    output$y_axisPC <- renderUI({
+      selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+                  choices = as.list(numPCs),
+                  selected = "PC2")
+    })
+    list(coords = coords, PoV = PoV)
+  })
+  ## heatmapPlot now is its own separate thing, want to be able to push a button for this...
+  observeEvent(input$genplotheat,{
+    values$plotheat <- ggplot(data = get_plotdata()[['gsva']], mapping = aes(x = variable, y = Pathway, fill = value)) + 
+      facet_grid(~ Condition, switch='x', scales = "free") +
+      #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
       scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
-                                  space = "Lab", name="GSVA enrichment score") + 
-       geom_tile(na.rm = TRUE) +
-       xlab(label = "Sample") +
-       ylab(label="") +
-       theme(axis.text.x = element_text(angle = 45, hjust = 1))
- }) 
-
-observeEvent(input$genplotpca, {
-  log_exp <- get_plotdata()[['exp_data']]
-  new_conditions <- values$data # getting the condition data from user's manual input
-  pca<- prcomp(t(log_exp), center=T, scale=F)
-  sampleVals<-data.frame(pca$x)
-  exprVals<-data.frame(pca$rotation)
-  PoV <- (pca$sdev^2/sum(pca$sdev^2))*100
-  # Make is so that it loops through all possibilities
-  #for (i in length(PoV)){
-  #  
-  #}
-  PC1per <- paste0("(", round(PoV[1],2), "%)")
-  PC2per <- paste0("(", round(PoV[2],2), "%)")
-  PC3per <- paste0("(", round(PoV[3],2), "%)")
-  PC4per <- paste0("(", round(PoV[4],2), "%)")
-  # need to make this more general
-  coords<-data.frame(sampleVals, condition = new_conditions,
-                     samplename = rownames(sampleVals))
-  #print(coords)
+                           space = "Lab", name="GSVA enrichment score") + 
+      geom_tile(na.rm = TRUE) +
+      xlab(label = "Sample") +
+      ylab(label="") +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  }) 
   
-  ## dropdown for selecting which PC we want to plot
-  output$y_axisPC <- renderUI({
-    selectInput("yaxis", "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
-              c("Cylinders" = "cyl",
-                "Transmission" = "am",
-                "Gears" = "gear"))
-    })
-  
-  values$plotpca <- ggplot(coords, aes(x = PC1, y = PC2)) +
+  observeEvent(input$genplotpca, {
+    coords <- pca_plotdata()[['coords']]
+    PoV <- pca_plotdata()[['PoV']]
+    PC1per <- paste0("(", round(PoV[1],2), "%)")
+    PC2per <- paste0("(", round(PoV[2],2), "%)")
+    PC3per <- paste0("(", round(PoV[3],2), "%)")
+    PC4per <- paste0("(", round(PoV[4],2), "%)")
+    if (is.null(input$y_axisPC)){
+      yaxis <- "PC2"
+    } else {
+      yaxis <- input$y_axisPC
+    }
+    values$plotpca <- ggplot(coords, aes_string(x = "PC1", y = yaxis)) + #almost... how do you accept selectInput for ggplot?
       #coord_cartesian(xlim=c(-2,2), ylim=c(-2,2)) +# data that you want to plot
-      geom_point(size=3, aes(fill=condition.Condition, shape=condition.Condition)) + 
-      stat_ellipse(geom = "polygon", alpha=.2, aes(color=condition.Condition, fill=condition.Condition)) +
+      geom_point(size=3, aes_string(fill="condition.Condition", shape="condition.Condition")) + 
+      stat_ellipse(geom = "polygon", alpha=.2, aes_string(color="condition.Condition", fill="condition.Condition")) +
       scale_color_manual(values=c("#67A7C1", "#FF6F59", "#292F36")) +
       scale_fill_manual(values=c("#67A7C1", "#FF6F59", "#292F36")) +
       scale_shape_manual(values=c(22, 21, 24)) +
       scale_x_continuous(name=paste("PC1", PC1per)) +
       scale_y_continuous(name=paste("PC2", PC2per)) +
       theme(legend.position = "bottom") 
- 
-}) 
+    
+  }) 
+  
+  
+  output$heatmapPlot <- renderPlot({values$plotheat}, height='auto')
+  output$pcaPlot <- renderPlot({values$plotpca}, height='auto')
+  output$downloadPlot <- downloadHandler(
+    filename = function(){
+      paste('heatmapPlot','.png',sep='')
+    }, 
+    content = function(file){
+      ggsave(file,plot=values$plotheat)
+    }
+  )
+})
 
-
- output$heatmapPlot <- renderPlot({values$plotheat}, height='auto')
- output$pcaPlot <- renderPlot({values$plotpca}, height='auto')
- output$downloadPlot <- downloadHandler(
-   filename = function(){
-     paste('heatmapPlot','.png',sep='')
-     }, 
-   content = function(file){
-   ggsave(file,plot=values$plotheat)
-     }
-   )
-  })
 
 
 shinyApp(ui, server)
