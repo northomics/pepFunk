@@ -9,7 +9,7 @@ library(plyr)
 library(DESeq2)
 library(GSVA)
 library(limma)
-
+library(ggdendro)
 
 
 ###########
@@ -192,6 +192,11 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                           downloadButton('dlPCA', 'Download PCA biplot')
                           ),
                  
+                 tabPanel("Sample clustering",
+                          plotOutput("clustDendro"),
+                          actionButton('genclustdendro', 'Generate cluster dendrogram'),
+                          downloadButton('dlDendro', 'Download cluster dendrogram')), #maybe have a second drop down menu for this
+                 
                  tabPanel("Functional enrichment heatmap",
                           plotOutput("heatmapPlot"),
                           colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
@@ -372,7 +377,6 @@ server <- function(input,output,session)({
     clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
     gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
     gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA') 
-    #return(gsvaplot_data)
     list(exp_data = exp_data, gsva = gsvaplot_data)
   })
   
@@ -430,11 +434,10 @@ server <- function(input,output,session)({
     PC3per <- paste0("(", round(PoV[3],2), "%)")
     PC4per <- paste0("(", round(PoV[4],2), "%)")
     #if (is.null(input$y_axisPC)){
-    #  yaxis <- "PC2"
+      yaxis <- "PC2" # how do you make this work?
     #} else {
     #yaxis <- input$y_axisPC
-    yaxis <- "PC2"
-    print(yaxis)
+    #values$yaxis <- input$y_axisPC
     #}
     values$plotpca <- ggplot(coords, aes_string(x = "PC1", y = yaxis)) + #almost... how do you accept selectInput for ggplot?
       #coord_cartesian(xlim=c(-2,2), ylim=c(-2,2)) +# data that you want to plot
@@ -449,8 +452,15 @@ server <- function(input,output,session)({
     
   }) 
   
- 
+  observeEvent(input$genclustdendro, {
+    log_exp <- get_plotdata()[['exp_data']]
+    dd <- dist(log_exp %>% t(), method = "euclidean") # be able to chose distance
+    hc <- hclust(dd, method = "ward.D2") # be able to chose method
+    print("almost there")
+    values$dendro <- ggdendrogram(hc)
+  }) 
   
+  output$clustDendro <- renderPlot({values$dendro}, height='auto')
   output$heatmapPlot <- renderPlot({values$plotheat}, height='auto')
   output$pcaPlot <- renderPlot({values$plotpca}, height='auto')
   output$downloadPlot <- downloadHandler(
