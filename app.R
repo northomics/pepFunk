@@ -196,18 +196,13 @@ ui <- shinyUI(fluidPage(
                  plotOutput("pcaPlot"),
                  
                  # probably want to be able to chose PCs
-                 fluidRow(
-                   column(6, wellPanel(actionBttn('genplotpca', label='Generate/update plot', color='success', style = 'jelly'),
+                # fluidRow(
+                 #actionBttn('genplotpca', label='Generate/update plot', color='success', style = 'jelly'),
                                         
-                                        #actionButton('genplotpca', 'Generate PCA biplot and update colours'),
-                                        downloadButton('dlPCA', 'Download PCA biplot')
-                                        ),
-                   column(6, wellPanel(
-                     selectInput("variable", "Variable:",
-                                 c("Cylinders" = "cyl",
-                                   "Transmission" = "am",
-                                   "Gears" = "gear")
-                   ))))
+                   actionButton('genplotpca', 'Generate PCA biplot and update colours'),
+                   downloadButton('dlPCA', 'Download PCA biplot'),
+                   uiOutput("y_axisPC")
+                 #  )
         )
                  
                 ),
@@ -219,7 +214,7 @@ ui <- shinyUI(fluidPage(
       )
     )
   )
-))
+)
 
 server <- function(input,output,session)({
   
@@ -410,6 +405,15 @@ observeEvent(input$genplotpca, {
   coords<-data.frame(sampleVals, condition = new_conditions,
                      samplename = rownames(sampleVals))
   #print(coords)
+  
+  ## dropdown for selecting which PC we want to plot
+  output$y_axisPC <- renderUI({
+    selectInput("yaxis", "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+              c("Cylinders" = "cyl",
+                "Transmission" = "am",
+                "Gears" = "gear"))
+    })
+  
   values$plotpca <- ggplot(coords, aes(x = PC1, y = PC2)) +
       #coord_cartesian(xlim=c(-2,2), ylim=c(-2,2)) +# data that you want to plot
       geom_point(size=3, aes(fill=condition.Condition, shape=condition.Condition)) + 
