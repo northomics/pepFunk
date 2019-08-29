@@ -10,7 +10,7 @@ library(DESeq2)
 library(GSVA)
 library(limma)
 library(ggdendro)
-
+library(dendextend)
 
 ###########
 ## TO DO ##
@@ -334,7 +334,7 @@ server <- function(input,output,session)({
     gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                       kcdf='Gaussian') ## rnaseq=F because we have continuous data
     new_conditions <- values$data
-    
+    new_samples <- new_conditions$Samples
     cond <- factor(new_conditions$Condition) %>% relevel(control_cond) # DMSO is the control
     #print(cond)
     design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
@@ -376,7 +376,8 @@ server <- function(input,output,session)({
     
     clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
     gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
-    gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA') 
+    gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
+    colnames(exp_data) <- new_samples
     list(exp_data = exp_data, gsva = gsvaplot_data)
   })
   
@@ -456,8 +457,18 @@ server <- function(input,output,session)({
     log_exp <- get_plotdata()[['exp_data']]
     dd <- dist(log_exp %>% t(), method = "euclidean") # be able to chose distance
     hc <- hclust(dd, method = "ward.D2") # be able to chose method
-    print("almost there")
-    values$dendro <- ggdendrogram(hc)
+    condcolours <- values$data %>% mutate(Colour = case_when(
+      Condition == input$control ~ "#67A7C1",
+      Condition == input$othercond ~ "#FF6F59",
+      Condition == input$othercond2 ~ "#292F36"))
+    dend <- log_exp %>% t() %>% dist(method = 'euclidean') %>% 
+      hclust(method = 'ward.D2') %>% as.dendrogram() %>%
+      set("leaves_pch", 19) %>%
+      set("leaves_col", condcolours$Colour, order_value = TRUE)
+    dend <- as.ggdend(dend)  
+    values$dendro <- ggplot(dend)
+
+    #values$dendro <- ggdendrogram(hc)
   }) 
   
   output$clustDendro <- renderPlot({values$dendro}, height='auto')
