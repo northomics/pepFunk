@@ -163,11 +163,11 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                                     
                                     #horizontal line
                                     tags$hr(),
-                                    textInput("control", "Input control condition", "Control"),
-                                    textInput("othercond", "Input other condition", "Condition"),
+                                    textInput("control", "Input control condition", "Enter control/reference condition name"),
+                                    textInput("othercond", "Input other condition", "Enter test condition name"),
                                     conditionalPanel(
                                       condition = "input.moreconditions == 'yes'",
-                                      textInput("othercond2", "Input other condition", "Other condition")),
+                                      textInput("othercond2", "Input other condition", "Enter other test condition name")),
                                     radioButtons("moreconditions", "Do you have more conditions?",
                                                  c("Yes" = "yes",
                                                    "No" = "no"), selected="no"),
@@ -187,7 +187,11 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                  
                  tabPanel("PCA",
                           plotOutput("pcaPlot"),
-                          uiOutput("y_axisPC"),
+                          #uiOutput("y_axisPC"), # get back to this but see if this is the issue first
+                          selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+                                      choices = c('PC2' = 'PC2',
+                                                  'PC3' = 'PC3'),
+                                      selected = "PC2"),
                           actionButton('genplotpca', 'Generate PCA biplot and update colours'),
                           downloadButton('dlPCA', 'Download PCA biplot')
                           ),
@@ -419,25 +423,33 @@ server <- function(input,output,session)({
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
   }) 
   
-  
+  yaxis_pcObs <- reactive({
+    if (is.null(input$y_axisPC)){
+      yaxis <- "PC2" # how do you make this work?
+    } else {
+    yaxis <- input$y_axisPC 
+    }
+    print(yaxis)
+  })
   
   observeEvent(input$genplotpca, {
     coords <- pca_plotdata()[['coords']]
     PoV <- pca_plotdata()[['PoV']]
     numPCs <- pca_plotdata()[['numPCs']]
-    output$y_axisPC <- renderUI({
-      selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
-                  choices = as.list(numPCs),
-                  selected = "PC2")
-    })
+    #output$y_axisPC <- renderUI({
+    #  selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+    #              choices = as.list(numPCs),
+    #              selected = "PC2")
+    #})
     PC1per <- paste0("(", round(PoV[1],2), "%)")
     PC2per <- paste0("(", round(PoV[2],2), "%)")
     PC3per <- paste0("(", round(PoV[3],2), "%)")
     PC4per <- paste0("(", round(PoV[4],2), "%)")
     #if (is.null(input$y_axisPC)){
-      yaxis <- "PC2" # how do you make this work?
+    #  yaxis <- "PC2" # how do you make this work?
     #} else {
-    #yaxis <- input$y_axisPC
+    yaxis <- yaxis_pcObs()
+    print(yaxis)
     #values$yaxis <- input$y_axisPC
     #}
     values$plotpca <- ggplot(coords, aes_string(x = "PC1", y = yaxis)) + #almost... how do you accept selectInput for ggplot?
