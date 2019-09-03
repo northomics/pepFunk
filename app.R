@@ -187,11 +187,11 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                  
                  tabPanel("PCA",
                           plotOutput("pcaPlot"),
-                          #uiOutput("y_axisPC"), # get back to this but see if this is the issue first
-                          selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
-                                      choices = c('PC2' = 'PC2',
-                                                  'PC3' = 'PC3'),
-                                      selected = "PC2"),
+                          uiOutput("y_axisPC"), # get back to this but see if this is the issue first
+                          #selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+                          #            choices = c('PC2' = 'PC2',
+                          #                        'PC3' = 'PC3'),
+                          #            selected = "PC2"),
                           actionButton('genplotpca', 'Generate PCA biplot and update colours'),
                           downloadButton('dlPCA', 'Download PCA biplot')
                           ),
@@ -401,11 +401,12 @@ server <- function(input,output,session)({
     # need to make this more general
     coords<-data.frame(sampleVals, condition = new_conditions,
                        samplename = rownames(sampleVals))
-    numPCs <- paste0("PC", 1:length(PoV))
-    print(numPCs)
+    values$numPCs <- paste0("PC", 1:length(PoV))
+    numPCs <- values$numPCs
+    #print(numPCs)
     ## dropdown for selecting which PC we want to plot
     
-    list(coords = coords, PoV = PoV, numPCs = numPCs)
+    list(coords = coords, PoV = PoV)
   })
   
 
@@ -423,24 +424,27 @@ server <- function(input,output,session)({
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
   }) 
   
-  yaxis_pcObs <- reactive({
-    if (is.null(input$y_axisPC)){
-      yaxis <- "PC2" # how do you make this work?
-    } else {
-    yaxis <- input$y_axisPC 
-    }
-    print(yaxis)
-  })
+ # yaxis_pcObs <- reactive({
+ #   if (is.null(input$y_axisPC)){
+ #     yaxis <- "PC2" # how do you make this work?
+ #   } else {
+ #   yaxis <- input$y_axisPC 
+ #   }
+ #   print(yaxis)
+ # })
+  
+  
+   output$y_axisPC <- renderUI({
+    if (is.null(get_data())){
+      return()}
+    selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+                choices = as.list(values$numPCs),
+                selected = "PC2")})
   
   observeEvent(input$genplotpca, {
     coords <- pca_plotdata()[['coords']]
     PoV <- pca_plotdata()[['PoV']]
     numPCs <- pca_plotdata()[['numPCs']]
-    #output$y_axisPC <- renderUI({
-    #  selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
-    #              choices = as.list(numPCs),
-    #              selected = "PC2")
-    #})
     PC1per <- paste0("(", round(PoV[1],2), "%)")
     PC2per <- paste0("(", round(PoV[2],2), "%)")
     PC3per <- paste0("(", round(PoV[3],2), "%)")
@@ -448,7 +452,7 @@ server <- function(input,output,session)({
     #if (is.null(input$y_axisPC)){
     #  yaxis <- "PC2" # how do you make this work?
     #} else {
-    yaxis <- yaxis_pcObs()
+    yaxis <- output$y_axisPC
     print(yaxis)
     #values$yaxis <- input$y_axisPC
     #}
