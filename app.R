@@ -186,8 +186,12 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                            )),
                  
                  tabPanel("PCA",
-                          plotOutput("pcaPlot"),
+                          fluidRow(
+                            column(12, plotOutput("pcaPlot")))
+                            ,
                           #uiOutput("y_axisPC"), # get back to this but see if this is the issue first
+                          fluidRow(
+                            column(6,
                           selectInput("y_axisPC", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
                                       choices = c('2' = '2'),
                                       selected = '2'),
@@ -195,22 +199,60 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                                       choices = c('1' = '1'),
                                       selected = "1"),
                           actionButton('genplotpca', 'Generate PCA biplot and update colours'),
-                          downloadButton('dlPCA', 'Download PCA biplot')
-                          ),
+                          downloadButton('dlPCA', 'Download PCA biplot')),
+                          column(6,
+                                 colourInput("control_col", "Colour for control/reference condition", "#67A7C1"),
+                                 colourInput("cond1_col", "Colour for condition 1", "#FF6F59"),
+                                 colourInput("cond2_col", "Colour for condition 2", "#292F36")
+                                 )
+                          
+                          )),
                  
                  tabPanel("Sample clustering",
-                          plotOutput("clustDendro"),
-                          actionButton('genclustdendro', 'Generate cluster dendrogram'),
-                          downloadButton('dlDendro', 'Download cluster dendrogram')), #maybe have a second drop down menu for this
+                          
+                          fluidRow(
+                            column(12,
+                          plotOutput("clustDendro")
+                            )
+                          ),
+                          
+                          fluidRow(
+                            column(6,
+                                   colourInput("control_coldend", "Colour for control/reference condition", "#67A7C1"),
+                                   colourInput("cond1_coldend", "Colour for condition 1", "#FF6F59"),
+                                   colourInput("cond2_coldend", "Colour for condition 2", "#292F36")
+                            ),
+                            column(6,
+                                   selectInput("dist_method", label = "Distance method:",
+                                               choices = c('Euclidean' = 'eucl',
+                                                        'Canberra' = 'canb',
+                                                         'Binary' = 'bina',
+                                                        'Minkowski' = 'mink'),
+                                                       selected = 'eucl'),
+                                   selectInput("hclust_method", label = "Hierarchical clustering method:",
+                                               choices = c('Ward' = 'ward.D',
+                                                           'Ward 2' = 'ward.D2',
+                                                           'Single' = 'sing',
+                                                           'Complete' = 'compl',
+                                                           'Average' = 'aver',
+                                                           'McQuitty' = 'mcq',
+                                                           'Median' = 'medi',
+                                                           'Centroid' = 'centr'),
+                                               selected = 'ward.D2'),
+                                   actionButton('genclustdendro', 'Generate cluster dendrogram'),
+                                   downloadButton('dlDendro', 'Download cluster dendrogram')
+                          )
+                          )), #maybe have a second drop down menu for this
                  
                  tabPanel("Functional enrichment heatmap",
                           plotOutput("heatmapPlot"),
                           colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
                           colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
                           actionButton('genplotheat', 'Generate heatmap and update colours'),
-                          downloadButton('downloadPlot','Download heatmap'))
-)
+                          downloadButton('downloadPlot','Download heatmap')
+                          )
 
+)
 server <- function(input,output,session)({
 #### renderUI 
   ## allow additional conditions, for adding and removing...
@@ -361,10 +403,6 @@ server <- function(input,output,session)({
     clusterdata <- colnames(gsva_kegg)[hclust(dist(gsva_kegg%>%t()))$order]
     
     ## only looking at significantly altered gene sets.
-    #sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
-    # rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
-    #sigpathways <- melt(sigpathways, id.vars='Pathway') %>% filter(value != 0) %>% dplyr::select(-value) %>%
-    #  mutate(keep = rep("KEEP", nrow(.)))
     if (ncol(sigdrugs %>% as.data.frame()) >= 2){
       sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
         rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
@@ -448,8 +486,6 @@ server <- function(input,output,session)({
       }
     yaxis <- input$y_axisPC
     xaxis <- input$x_axisPC
-    
-    
     updateSelectInput(session, "y_axisPC", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
                       choices = as.list(numPCs),
                       selected = yaxis)
@@ -463,40 +499,43 @@ server <- function(input,output,session)({
     
     yaxislabel <- paste0("PC", yaxis, " ", yperc)
     xaxislabel <- paste0("PC", xaxis, " ", xperc)
-    values$plotpca <- ggplot(coords, aes_string(x = paste0('PC', xaxis), y = paste0('PC', yaxis))) + #almost... how do you accept selectInput for ggplot?
-      #coord_cartesian(xlim=c(-2,2), ylim=c(-2,2)) +# data that you want to plot
+    values$plotpca <- ggplot(coords, aes_string(x = paste0('PC', xaxis), y = paste0('PC', yaxis))) + #accept selectInput to choose axes!
       geom_point(size=3, aes_string(fill="condition.Condition", shape="condition.Condition")) + 
       stat_ellipse(geom = "polygon", alpha=.2, aes_string(color="condition.Condition", fill="condition.Condition")) +
-      scale_color_manual(values=c("#67A7C1", "#FF6F59", "#292F36")) +
-      scale_fill_manual(values=c("#67A7C1", "#FF6F59", "#292F36")) +
+      scale_color_manual(values=c(input$control_col, input$cond1_col, input$cond2_col)) + #pick colours for colour picker
+      scale_fill_manual(values=c(input$control_col, input$cond1_col, input$cond2_col)) +
       scale_shape_manual(values=c(22, 21, 24)) +
-      scale_x_continuous(name=xaxislabel) +
+      scale_x_continuous(name=xaxislabel) + # labels depend on selected PCs
       scale_y_continuous(name=yaxislabel) +
-      theme(legend.position = "bottom") 
+      theme(legend.position = "bottom", legend.title = element_blank()) 
     
   }) 
   
   observeEvent(input$genclustdendro, {
     log_exp <- get_plotdata()[['exp_data']]
-    dd <- dist(log_exp %>% t(), method = "euclidean") # be able to chose distance
-    hc <- hclust(dd, method = "ward.D2") # be able to chose method
+    dist_method <- input$dist_method
+    hclust_method <- input$hclust_method
+    dd <- dist(log_exp %>% t(), method = dist_method) # be able to chose distance
+    hc <- hclust(dd, method = hclust_method) # be able to chose method
     condcolours <- values$data %>% mutate(Colour = case_when(
-      Condition == input$control ~ "#67A7C1",
-      Condition == input$othercond ~ "#FF6F59",
-      Condition == input$othercond2 ~ "#292F36"))
-    dend <- log_exp %>% t() %>% dist(method = 'euclidean') %>% 
-      hclust(method = 'ward.D2') %>% as.dendrogram() %>%
+      Condition == input$control ~ input$control_coldend,
+      Condition == input$othercond ~ input$cond1_coldend,
+      Condition == input$othercond2 ~ input$cond2_coldend)
+      )
+    dend <- log_exp %>% t() %>% dist(method = dist_method) %>% 
+      hclust(method = hclust_method) %>% as.dendrogram() %>%
       set("leaves_pch", 19) %>%
       set("leaves_col", condcolours$Colour, order_value = TRUE)
     dend <- as.ggdend(dend)  
     values$dendro <- ggplot(dend)
-
-    #values$dendro <- ggdendrogram(hc)
   }) 
   
+  ## plotting 
   output$clustDendro <- renderPlot({values$dendro}, height='auto')
   output$heatmapPlot <- renderPlot({values$plotheat}, height='auto')
   output$pcaPlot <- renderPlot({values$plotpca}, height='auto')
+  
+  ## organizing plot download handlers
   output$downloadPlot <- downloadHandler(
     filename = function(){
       paste('heatmapPlot','.png',sep='')
@@ -505,6 +544,16 @@ server <- function(input,output,session)({
       ggsave(file,plot=values$plotheat)
     }
   )
+  
+  
+  output$dlPCA <- downloadHandler(
+    filename = function(){
+      paste('pcaPlot','.png',sep='')
+    }, 
+    content = function(file){
+      ggsave(file,plot=values$plotpca)
+    })
+  
 })
 
 
