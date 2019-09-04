@@ -187,11 +187,13 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                  
                  tabPanel("PCA",
                           plotOutput("pcaPlot"),
-                          uiOutput("y_axisPC"), # get back to this but see if this is the issue first
-                          #selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
-                          #            choices = c('PC2' = 'PC2',
-                          #                        'PC3' = 'PC3'),
-                          #            selected = "PC2"),
+                          #uiOutput("y_axisPC"), # get back to this but see if this is the issue first
+                          selectInput("y_axisPC", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+                                      choices = c('2' = '2'),
+                                      selected = '2'),
+                          selectInput("x_axisPC", label = "PC on x-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+                                      choices = c('1' = '1'),
+                                      selected = "1"),
                           actionButton('genplotpca', 'Generate PCA biplot and update colours'),
                           downloadButton('dlPCA', 'Download PCA biplot')
                           ),
@@ -401,12 +403,12 @@ server <- function(input,output,session)({
     # need to make this more general
     coords<-data.frame(sampleVals, condition = new_conditions,
                        samplename = rownames(sampleVals))
-    values$numPCs <- paste0("PC", 1:length(PoV))
-    numPCs <- values$numPCs
+    #values$numPCs <- paste0("PC", 1:length(PoV))
+    numPCs <- 1:length(PoV)
     #print(numPCs)
     ## dropdown for selecting which PC we want to plot
     
-    list(coords = coords, PoV = PoV)
+    list(coords = coords, PoV = PoV, numPCs=numPCs)
   })
   
 
@@ -434,37 +436,42 @@ server <- function(input,output,session)({
  # })
   
   
-   output$y_axisPC <- renderUI({
-    if (is.null(get_data())){
-      return()}
-    selectInput("yaxis", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
-                choices = as.list(values$numPCs),
-                selected = "PC2")})
   
   observeEvent(input$genplotpca, {
     coords <- pca_plotdata()[['coords']]
     PoV <- pca_plotdata()[['PoV']]
     numPCs <- pca_plotdata()[['numPCs']]
-    PC1per <- paste0("(", round(PoV[1],2), "%)")
-    PC2per <- paste0("(", round(PoV[2],2), "%)")
-    PC3per <- paste0("(", round(PoV[3],2), "%)")
-    PC4per <- paste0("(", round(PoV[4],2), "%)")
-    #if (is.null(input$y_axisPC)){
-    #  yaxis <- "PC2" # how do you make this work?
-    #} else {
-    yaxis <- output$y_axisPC
-    print(yaxis)
-    #values$yaxis <- input$y_axisPC
-    #}
-    values$plotpca <- ggplot(coords, aes_string(x = "PC1", y = yaxis)) + #almost... how do you accept selectInput for ggplot?
+    for (i in 1:length(PoV)) {
+      percent <- paste0("(", round(PoV[i],2), "%)")
+      name <- paste0("PC", i, "per")
+      assign(name, percent)
+      }
+    yaxis <- input$y_axisPC
+    xaxis <- input$x_axisPC
+    
+    
+    updateSelectInput(session, "y_axisPC", label = "PC on y-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+                      choices = as.list(numPCs),
+                      selected = yaxis)
+    updateSelectInput(session, "x_axisPC", label = "PC on x-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
+                      choices = as.list(numPCs),
+                      selected = xaxis)
+    yaxis <- input$y_axisPC
+    xaxis <- input$x_axisPC
+    yperc <- paste0("(", round(PoV[yaxis %>% as.numeric()] ,2), "%)")
+    xperc <- paste0("(", round(PoV[xaxis %>% as.numeric()] ,2), "%)")
+    
+    yaxislabel <- paste0("PC", yaxis, " ", yperc)
+    xaxislabel <- paste0("PC", xaxis, " ", xperc)
+    values$plotpca <- ggplot(coords, aes_string(x = paste0('PC', xaxis), y = paste0('PC', yaxis))) + #almost... how do you accept selectInput for ggplot?
       #coord_cartesian(xlim=c(-2,2), ylim=c(-2,2)) +# data that you want to plot
       geom_point(size=3, aes_string(fill="condition.Condition", shape="condition.Condition")) + 
       stat_ellipse(geom = "polygon", alpha=.2, aes_string(color="condition.Condition", fill="condition.Condition")) +
       scale_color_manual(values=c("#67A7C1", "#FF6F59", "#292F36")) +
       scale_fill_manual(values=c("#67A7C1", "#FF6F59", "#292F36")) +
       scale_shape_manual(values=c(22, 21, 24)) +
-      scale_x_continuous(name=paste("PC1", PC1per)) +
-      scale_y_continuous(name=paste("PC2", PC2per)) +
+      scale_x_continuous(name=xaxislabel) +
+      scale_y_continuous(name=yaxislabel) +
       theme(legend.position = "bottom") 
     
   }) 
