@@ -410,48 +410,8 @@ server <- function(input,output,session)({
     fit <- lmFit(gsva_kegg, design)
     fit <- eBayes(fit, trend=T)
     allGeneSets <- topTable(fit, coef=2:ncol(design), number=Inf)
-    ## only plot "significant" pvalues
-    if (input$plotsig == 'y') {
-      pval <- as.numeric(input$pvalthresh)
-    } else {
-      pval <- 0.05 ## change this eventually
-    }
-    DEgeneSets <- topTable(fit, coef=2:ncol(design), number=Inf,
-                           p.value=pval, adjust="BH")
-    res <- decideTests(fit, p.value=pval)
     
-    sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
-    
-    
-
-    ## only looking at significantly altered gene sets.
-    if (ncol(sigdrugs %>% as.data.frame()) >= 2){
-      sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
-        rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
-    } else {
-      sigpathways <- as.data.frame(sigdrugs %>% abs())   
-      sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
-    }
-    
-    
-    sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% sigpathways$Pathway,]
-    gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
-      melt(., id='Pathway') %>%
-      merge(., new_conditions, by.x='variable', by.y = 'Samples')
-    
-    
-    #clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
-    
-    ## chosing if we want to plot kegg by p-value or by clustering!
-    if (input$kegg_ord == 'clust'){
-      kegg_order <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
-    } else {
-      kegg_order <- allGeneSets[order(-allGeneSets$P.Value),] %>% rownames()
-    }
-    gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = kegg_order)
-    gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
-    colnames(exp_data) <- new_samples
-    list(exp_data = exp_data, gsva = gsvaplot_data)
+    list(exp_data = exp_data, gsva = gsvaplot_data, DEgeneSets = DEgeneSets, allGeneSets = allGeneSets)
   })
   
   pca_plotdata <- reactive({
@@ -482,7 +442,17 @@ server <- function(input,output,session)({
     
   ## heatmapPlot now is its own separate thing, want to be able to push a button for this...
   observeEvent(input$genplotheat,{
-    values$plotheat <- ggplot(data = get_plotdata()[['gsva']], mapping = aes(x = variable, y = Pathway, fill = value)) + 
+    gsvaplot_data <- get_plotdata()[['gsva']]
+    sig_gsva <- get_plotdata()[['sig_gsva']]
+    allGeneSets <- get_plotdata()[['allGeneSets']]
+    if (input$kegg_ord == 'clust'){
+      kegg_order <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
+    } else {
+      kegg_order <- allGeneSets[order(-allGeneSets$P.Value),] %>% rownames()
+    }
+    gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
+    gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = kegg_order)
+    values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
       facet_grid(~ Condition, switch='x', scales = "free") +
       #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
       scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
