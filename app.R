@@ -245,14 +245,32 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                           )), #maybe have a second drop down menu for this
                  
                  tabPanel("Functional enrichment heatmap",
-                          plotOutput("heatmapPlot"),
-                          colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
-                          colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
-                          actionButton('genplotheat', 'Generate heatmap and update colours'),
-                          downloadButton('downloadPlot','Download heatmap')
-                          )
+                          sidebarLayout(
+                            sidebarPanel(width = 3,
+                                         colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
+                                         colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
+                                         radioButtons("sample_ord", "Order Samples:",
+                                                      c('By clustering' = 'clust',
+                                                        'By conditions/facets' = 'facets')),
+                                         radioButtons("kegg_ord", "Order KEGG pathways:",
+                                                      c('By clustering' = 'clust',
+                                                        'By p-value' = 'pval')),
+                                         radioButtons('plotsig', "Only plot significantly enriched KEGG?",
+                                                      c('Yes' = 'y',
+                                                        'No' = 'n'),
+                                                      selected = 'n'),
+                                         conditionalPanel(
+                                           condition = "input.plotsig == 'y'",
+                                           textInput("pvalthresh", "P-value threshold for plotting", "0.05")),
+                                         actionButton('genplotheat', 'Generate/update heatmap'),
+                                         downloadButton('downloadPlot','Download heatmap')
+                            ),
+                            mainPanel(
+                              plotOutput("heatmapPlot")
+                            ))
 
-)
+                    
+))
 server <- function(input,output,session)({
 #### renderUI 
   ## allow additional conditions, for adding and removing...
@@ -392,16 +410,20 @@ server <- function(input,output,session)({
     fit <- lmFit(gsva_kegg, design)
     fit <- eBayes(fit, trend=T)
     allGeneSets <- topTable(fit, coef=2:ncol(design), number=Inf)
+    ## only plot "significant" pvalues
+    if (input$plotsig == 'y') {
+      pval <- as.numeric(input$pvalthresh)
+    } else {
+      pval <- 0.05 ## change this eventually
+    }
     DEgeneSets <- topTable(fit, coef=2:ncol(design), number=Inf,
-                           p.value=0.05, adjust="BH")
-    res <- decideTests(fit, p.value=0.05)
+                           p.value=pval, adjust="BH")
+    res <- decideTests(fit, p.value=pval)
     
     sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
     
     
-    ## hierarcical clustering of the drugs by kegg
-    clusterdata <- colnames(gsva_kegg)[hclust(dist(gsva_kegg%>%t()))$order]
-    
+
     ## only looking at significantly altered gene sets.
     if (ncol(sigdrugs %>% as.data.frame()) >= 2){
       sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
@@ -418,8 +440,15 @@ server <- function(input,output,session)({
       merge(., new_conditions, by.x='variable', by.y = 'Samples')
     
     
-    clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
-    gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
+    #clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
+    
+    ## chosing if we want to plot kegg by p-value or by clustering!
+    if (input$kegg_ord == 'clust'){
+      kegg_order <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
+    } else {
+      kegg_order <- allGeneSets[order(-allGeneSets$P.Value),] %>% rownames()
+    }
+    gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = kegg_order)
     gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
     colnames(exp_data) <- new_samples
     list(exp_data = exp_data, gsva = gsvaplot_data)
@@ -512,6 +541,7 @@ server <- function(input,output,session)({
   }) 
   
   observeEvent(input$genclustdendro, {
+  #observe({
     log_exp <- get_plotdata()[['exp_data']]
     dist_method <- input$dist_method
     hclust_method <- input$hclust_method
