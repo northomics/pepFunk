@@ -274,6 +274,7 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
 server <- function(input,output,session)({
 #### renderUI 
   ## allow additional conditions, for adding and removing...
+  #https://www.reddit.com/r/rstats/comments/7n4qnj/shiny_observeevent_on_inserted_ui/
   observeEvent(input$addcond, {
     insertUI(
       selector = "#addcond",
@@ -313,9 +314,9 @@ server <- function(input,output,session)({
   ## this is not working...
   observeEvent(input$addcond, {
     condition_options <- c(input$control, input$othercond) 
-    newcond <- input$add
+    newcond <- as.character(input$add)
     print(newcond)
-    condition_options <- c(condition_options, newcond)
+    condition_options <<- c(condition_options, newcond)
   })
   
   output$OriData <- renderRHandsontable({
