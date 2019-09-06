@@ -484,18 +484,34 @@ server <- function(input,output,session)({
     } else {
       kegg_order <- allGeneSets[order(-allGeneSets$P.Value),] %>% rownames()
     }
+    
     gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = kegg_order)
     gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
     
-    values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
-      facet_grid(~ Condition, switch='x', scales = "free") +
-      #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
-      scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
-                           space = "Lab", name="GSVA enrichment score") + 
-      geom_tile(na.rm = TRUE) +
-      xlab(label = "Sample") +
-      ylab(label="") +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    if (input$sample_ord == 'clust'){
+      sample_order <- rownames(sig_gsva %>% t())[hclust(dist(sig_gsva %>% t()))$order]
+      gsvaplot_data$variable<- factor(gsvaplot_data$variable, levels = sample_order)
+      values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
+        #facet_grid(~ Condition, switch='x', scales = "free") +
+        #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
+        scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
+                             space = "Lab", name="GSVA enrichment score") + 
+        geom_tile(na.rm = TRUE) +
+        xlab(label = "Sample") +
+        ylab(label="") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ 
+    } else {
+      values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
+        facet_grid(~ Condition, switch='x', scales = "free") +
+        #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
+        scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
+                             space = "Lab", name="GSVA enrichment score") + 
+        geom_tile(na.rm = TRUE) +
+        xlab(label = "Sample") +
+        ylab(label="") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
   }) 
   
  # yaxis_pcObs <- reactive({
