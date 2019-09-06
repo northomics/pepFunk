@@ -172,7 +172,7 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                                                  c("Yes" = "yes",
                                                    "No" = "no"), selected="no"),
                                     #allow additional conditions, get this working after...
-                                    #actionButton("addcond", "Add additional condition"), actionButton("rmvcond", "Remove added condition"), # these are ugly
+                                    actionButton("addcond", "Add additional condition"), actionButton("rmvcond", "Remove added condition"), # these are ugly
                               
                                     
                                     radioButtons("format", "Manual or auto condition formatting?",
@@ -274,20 +274,20 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
 server <- function(input,output,session)({
 #### renderUI 
   ## allow additional conditions, for adding and removing...
-#  observeEvent(input$addcond, {
-#    insertUI(
-#      selector = "#addcond",
-#      where = "beforeBegin",
-#      ui = textInput(paste0("txt", input$add),
-#                     "Additional condition")
-#    )
-#  })
-#  ## allow removal of added condition
-#  observeEvent(input$rmvcond, {
-#    removeUI(
-#      selector = "div:has(> #txt)"
-#    )
-#  })  
+  observeEvent(input$addcond, {
+    insertUI(
+      selector = "#addcond",
+      where = "beforeBegin",
+      ui = textInput(paste0("txt", input$add),
+                     "Additional condition")
+    )
+  })
+  ## allow removal of added condition
+  observeEvent(input$rmvcond, {
+    removeUI(
+      selector = "div:has(> #txt)"
+    )
+  })  
   
   get_data <- reactive({
     inFile <- input$file1
@@ -307,6 +307,16 @@ server <- function(input,output,session)({
   
   
   values <- reactiveValues()
+  
+  ## be able to add conditions....testing this!!
+  
+  ## this is not working...
+  observeEvent(input$addcond, {
+    condition_options <- c(input$control, input$othercond) 
+    newcond <- input$add
+    print(newcond)
+    condition_options <- c(condition_options, newcond)
+  })
   
   output$OriData <- renderRHandsontable({
     if (input$moreconditions=='yes') {
