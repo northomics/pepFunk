@@ -411,6 +411,23 @@ server <- function(input,output,session)({
     fit <- eBayes(fit, trend=T)
     allGeneSets <- topTable(fit, coef=2:ncol(design), number=Inf)
     
+    gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
+      melt(., id='Pathway') %>%
+      merge(., new_conditions, by.x='variable', by.y = 'Samples')
+    
+    
+    #clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
+    
+    ## chosing if we want to plot kegg by p-value or by clustering!
+    if (input$kegg_ord == 'clust'){
+      kegg_order <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
+    } else {
+      kegg_order <- allGeneSets[order(-allGeneSets$P.Value),] %>% rownames()
+    }
+    gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = kegg_order)
+    gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
+    colnames(exp_data) <- new_samples
+    
     list(exp_data = exp_data, gsva = gsvaplot_data, DEgeneSets = DEgeneSets, allGeneSets = allGeneSets)
   })
   
