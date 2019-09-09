@@ -167,7 +167,7 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                                     textInput("othercond", "Input other condition", "Enter test condition name"),
                                     conditionalPanel(
                                       condition = "input.moreconditions == 'yes'",
-                                      textInput("othercondition", "Input other condition", "Enter other test condition name")),
+                                      textInput("othercond2", "Input other condition", "Enter other test condition name")),
                                     radioButtons("moreconditions", "Do you have more conditions?",
                                                  c("Yes" = "yes",
                                                    "No" = "no"), selected="no"),
@@ -277,9 +277,8 @@ server <- function(input,output,session)({
   ## allow additional conditions, for adding and removing...
   #https://www.reddit.com/r/rstats/comments/7n4qnj/shiny_observeevent_on_inserted_ui/
   
-  values <- reactiveValues()
+  values <- reactiveValues(btn = 0) # want to start the button count at 0... 
   ## be able to add conditions....testing this!!
-  vals <- reactiveValues(btn = 0) 
   ## this is not working...
 #  observeEvent(input$addcond, {
 #    condition_options <- c(input$control, input$othercond) 
@@ -297,14 +296,14 @@ server <- function(input,output,session)({
 #  })
   
   observeEvent(input$addcond, {
-    vals$btn <- vals$btn + 1
+    values$btn <- values$btn + 1
     insertUI(
       selector = '#placeholder',
       where = "beforeBegin",
       ui = tags$div( #wrapping in a div with id for ease of removal
-        id = paste0('line', vals$btn),
-        textInput(paste0("otherConditions", vals$btn + 1),
-                  label = paste("Condition", vals$btn + 1), value = ""
+        id = paste0('line', values$btn),
+        textInput(paste0("otherConditions", values$btn + 1),
+                  label = paste("Condition", values$btn + 1), value = ""
                   )
        )
     )
@@ -317,20 +316,22 @@ server <- function(input,output,session)({
   observeEvent(input$rmvcond, {
     removeUI(
       ## pass in appropriate div id
-      selector = paste0('#line', vals$btn)
+      selector = paste0('#line', values$btn)
     )
-    vals$btn <- vals$btn - 1 
+    values$btn <- values$btn - 1 
   })  
   
   
-  output$value <- renderText({ 
+  #output$value <- renderText({ 
+  additional_conds <- reactive({
     msg <- c(input[["otherConditions"]])
-    if (vals$btn > 1) {
-      for (i in 1:vals$btn) {
-        msg <- c(msg, input[[paste0("otherConditions", i + 1)]])
+    if (values$btn > 0) {
+      for (i in 1:values$btn) {
+        msg <- c(as.character(msg), as.character(input[[paste0("otherConditions", i + 1)]]))
       }
-      new_conds <- paste(msg, collapse = ",")  
-      print(new_conds)
+      #new_conds <- paste(msg, collapse = '" , "')  
+      new_conds <- msg
+      return(new_conds)
     }
   })
   
@@ -347,37 +348,58 @@ server <- function(input,output,session)({
   
   
   
+output$OriData <-renderRHandsontable({
+ if (values$btn > 0) {
+   additional_conds <- additional_conds()
+   condition_options <- c(input$control, input$othercond, additional_conds())
+ } else {
+   condition_options <- c(input$control, input$othercond)
+ }
   
-  output$OriData <- renderRHandsontable({
-       if (input$moreconditions=='yes') {
-      condition_options <- c(input$control, input$othercond, input$othercond2, "NA")
-    } else {
-      condition_options <- c(input$control, input$othercond, "NA") 
-    }
-    if (input$format == "auto"){
-      exp_data <- get_data()
-      samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
-      x <- data.frame(Samples = samplenames) %>%
-        mutate(Condition = case_when(
-          str_detect(Samples, fixed(input$control, ignore_case = T)) ~ input$control,
-          str_detect(Samples, fixed(input$othercond, ignore_case = T)) ~ input$othercond,
-          str_detect(Samples, fixed(input$othercond2, ignore_case = T)) ~ input$othercond2,
-          !(str_detect(Samples, fixed(input$control, ignore_case = T)) | str_detect(Samples, fixed(input$othercond, ignore_case = T)))~ "NA"))
-      rhandsontable(x) %>%
-        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
-    } else {
-      
-      # rhandsontable(as.data.frame(iris))
-      exp_data <- get_data()
-      #condition_options <- c(input$control, input$othercond, "NA")
-      #condition_options <- c("High", "DMSO", "NA")
-      samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
-      x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep("NA", length(samplenames))), 
-                      stringsAsFactors = FALSE)
-      rhandsontable(x) %>%
-        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
-    }
-  })
+  if (input$format == "auto"){
+    exp_data <- get_data()
+    samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
+    x <- data.frame(Samples = samplenames)
+     for (j in condition_options) {
+    x <- x %>% mutate(Condition = case_when(
+      str_detect(Samples, fixed(j, ignore_case = T)) ~ j)) }
+print(x)
+      } 
+})
+  
+  
+## This works!! I just want to try enabling for "unlimited" conditions...
+#  output$OriData <- renderRHandsontable({
+#    additional_conds <- additional_conds()
+#    if (input$moreconditions=='yes') {
+#      condition_options <- c(input$control, input$othercond, input$othercond2, "NA")
+#    } else {
+#      condition_options <- c(input$control, input$othercond, "NA") 
+#    }
+#    if (input$format == "auto"){
+#      exp_data <- get_data()
+#      samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
+#      x <- data.frame(Samples = samplenames) %>%
+#        mutate(Condition = case_when(
+#          str_detect(Samples, fixed(input$control, ignore_case = T)) ~ input$control,
+#          str_detect(Samples, fixed(input$othercond, ignore_case = T)) ~ input$othercond,
+#          str_detect(Samples, fixed(input$othercond2, ignore_case = T)) ~ input$othercond2,
+#          !(str_detect(Samples, fixed(input$control, ignore_case = T)) | str_detect(Samples, fixed(input$othercond, ignore_case = T)))~ "NA"))
+#      rhandsontable(x) %>%
+#        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+#    } else {
+#      
+#      # rhandsontable(as.data.frame(iris))
+#      exp_data <- get_data()
+#      #condition_options <- c(input$control, input$othercond, "NA")
+#      #condition_options <- c("High", "DMSO", "NA")
+#      samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
+#      x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep("NA", length(samplenames))), 
+#                      stringsAsFactors = FALSE)
+#      rhandsontable(x) %>%
+#        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+#    }
+#  })
   
   
   observeEvent(input$runButton, {
