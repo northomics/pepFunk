@@ -167,13 +167,14 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                                     textInput("othercond", "Input other condition", "Enter test condition name"),
                                     conditionalPanel(
                                       condition = "input.moreconditions == 'yes'",
-                                      textInput("othercond2", "Input other condition", "Enter other test condition name")),
+                                      textInput("othercondition", "Input other condition", "Enter other test condition name")),
                                     radioButtons("moreconditions", "Do you have more conditions?",
                                                  c("Yes" = "yes",
                                                    "No" = "no"), selected="no"),
                                     #allow additional conditions, get this working after...
                                     actionButton("addcond", "Add additional condition"), actionButton("rmvcond", "Remove added condition"), # these are ugly
-                              
+                                    tags$div(id = 'placeholder'),
+                                    verbatimTextOutput("value", placeholder = T),
                                     
                                     radioButtons("format", "Manual or auto condition formatting?",
                                                  c("Manual" = "manual",
@@ -275,31 +276,69 @@ server <- function(input,output,session)({
 #### renderUI 
   ## allow additional conditions, for adding and removing...
   #https://www.reddit.com/r/rstats/comments/7n4qnj/shiny_observeevent_on_inserted_ui/
+  
+  values <- reactiveValues()
+  ## be able to add conditions....testing this!!
+  vals <- reactiveValues(btn = 0) 
+  ## this is not working...
+#  observeEvent(input$addcond, {
+#    condition_options <- c(input$control, input$othercond) 
+#    newcond <- as.character(input$add)
+#    print(newcond)
+#    condition_options <<- c(condition_options, newcond)
+#  })
+#  observeEvent(input$addcond, {
+#    insertUI(
+#      selector = "#addcond",
+#      where = "beforeBegin",
+#      ui = textInput(paste0("txt", input$add),
+#                     "Additional condition")
+#    )
+#  })
+  
   observeEvent(input$addcond, {
+    vals$btn <- vals$btn + 1
     insertUI(
-      selector = "#addcond",
+      selector = '#placeholder',
       where = "beforeBegin",
-      ui = textInput(paste0("txt", input$add),
-                     "Additional condition")
+      ui = tags$div( #wrapping in a div with id for ease of removal
+        id = paste0('line', vals$btn),
+        textInput(paste0("otherConditions", vals$btn + 1),
+                  label = paste("Condition", vals$btn + 1), value = ""
+                  )
+       )
     )
+
   })
+  
+ #observe(print(input[['mainDesc1']]))
+ 
   ## allow removal of added condition
   observeEvent(input$rmvcond, {
     removeUI(
-      selector = "div:has(> #txt)"
+      ## pass in appropriate div id
+      selector = paste0('#line', vals$btn)
     )
+    vals$btn <- vals$btn - 1 
   })  
+  
+  
+  output$value <- renderText({ 
+    msg <- c(input[["otherConditions"]])
+    if (vals$btn > 1) {
+      for (i in 1:vals$btn) {
+        msg <- c(msg, input[[paste0("otherConditions", i + 1)]])
+      }
+      new_conds <- paste(msg, collapse = ",")  
+      print(new_conds)
+    }
+  })
   
   get_data <- reactive({
     inFile <- input$file1
     validate(
       need(inFile != "", "Please upload a dataset")
     )
-    
-    #if (is.null(inFile)) {
-    #  return(NULL)
-    #} # if no upload
-    # exp_data <- read.delim("peptides.txt", row.names=1) %>%
     exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
       as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
     exp_data[exp_data==1] <-NA
@@ -307,20 +346,10 @@ server <- function(input,output,session)({
   })
   
   
-  values <- reactiveValues()
   
-  ## be able to add conditions....testing this!!
-  
-  ## this is not working...
-  observeEvent(input$addcond, {
-    condition_options <- c(input$control, input$othercond) 
-    newcond <- as.character(input$add)
-    print(newcond)
-    condition_options <<- c(condition_options, newcond)
-  })
   
   output$OriData <- renderRHandsontable({
-    if (input$moreconditions=='yes') {
+       if (input$moreconditions=='yes') {
       condition_options <- c(input$control, input$othercond, input$othercond2, "NA")
     } else {
       condition_options <- c(input$control, input$othercond, "NA") 
