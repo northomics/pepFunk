@@ -360,12 +360,25 @@ output$OriData <-renderRHandsontable({
     exp_data <- get_data()
     samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
     x <- data.frame(Samples = samplenames)
-     for (j in condition_options) {
-    x <- x %>% mutate(Condition = case_when(
-      str_detect(Samples, fixed(j, ignore_case = T)) ~ j)) }
-print(x)
+    conditions <- purrr::map(condition_options, 
+                             ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
+    x <- x %>% mutate(Condition = case_when(!!!conditions))
+     rhandsontable(x) %>%
+       hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+   } else {
+     
+     # rhandsontable(as.data.frame(iris))
+     exp_data <- get_data()
+     #condition_options <- c(input$control, input$othercond, "NA")
+     #condition_options <- c("High", "DMSO", "NA")
+     samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
+     x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep("NA", length(samplenames))), 
+                     stringsAsFactors = FALSE)
+     rhandsontable(x) %>%
+       hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+   }
       } 
-})
+)
   
   
 ## This works!! I just want to try enabling for "unlimited" conditions...
