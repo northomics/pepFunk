@@ -202,9 +202,10 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                           actionButton('genplotpca', 'Generate PCA biplot and update colours'),
                           downloadButton('dlPCA', 'Download PCA biplot')),
                           column(6,
-                                 colourInput("control_col", "Colour for control/reference condition", "#67A7C1"),
-                                 colourInput("cond1_col", "Colour for condition 1", "#FF6F59"),
-                                 colourInput("cond2_col", "Colour for condition 2", "#292F36")
+                                 #colourInput("control_col", "Colour for control/reference condition", "#67A7C1"),
+                                 #colourInput("cond1_col", "Colour for condition 1", "#FF6F59"),
+                                 #colourInput("cond2_col", "Colour for condition 2", "#292F36"),
+                                 uiOutput("colourpickers")
                                  )
                           
                           )),
@@ -367,10 +368,7 @@ output$OriData <-renderRHandsontable({
        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
    } else {
      
-     # rhandsontable(as.data.frame(iris))
      exp_data <- get_data()
-     #condition_options <- c(input$control, input$othercond, "NA")
-     #condition_options <- c("High", "DMSO", "NA")
      samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
      x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep("NA", length(samplenames))), 
                      stringsAsFactors = FALSE)
@@ -381,39 +379,7 @@ output$OriData <-renderRHandsontable({
 )
   
   
-## This works!! I just want to try enabling for "unlimited" conditions...
-#  output$OriData <- renderRHandsontable({
-#    additional_conds <- additional_conds()
-#    if (input$moreconditions=='yes') {
-#      condition_options <- c(input$control, input$othercond, input$othercond2, "NA")
-#    } else {
-#      condition_options <- c(input$control, input$othercond, "NA") 
-#    }
-#    if (input$format == "auto"){
-#      exp_data <- get_data()
-#      samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
-#      x <- data.frame(Samples = samplenames) %>%
-#        mutate(Condition = case_when(
-#          str_detect(Samples, fixed(input$control, ignore_case = T)) ~ input$control,
-#          str_detect(Samples, fixed(input$othercond, ignore_case = T)) ~ input$othercond,
-#          str_detect(Samples, fixed(input$othercond2, ignore_case = T)) ~ input$othercond2,
-#          !(str_detect(Samples, fixed(input$control, ignore_case = T)) | str_detect(Samples, fixed(input$othercond, ignore_case = T)))~ "NA"))
-#      rhandsontable(x) %>%
-#        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
-#    } else {
-#      
-#      # rhandsontable(as.data.frame(iris))
-#      exp_data <- get_data()
-#      #condition_options <- c(input$control, input$othercond, "NA")
-#      #condition_options <- c("High", "DMSO", "NA")
-#      samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
-#      x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep("NA", length(samplenames))), 
-#                      stringsAsFactors = FALSE)
-#      rhandsontable(x) %>%
-#        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
-#    }
-#  })
-  
+
   
   observeEvent(input$runButton, {
     values$data <-  hot_to_r(input$OriData)
@@ -487,6 +453,27 @@ output$OriData <-renderRHandsontable({
  
     colnames(exp_data) <- new_samples
     list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, new_conditions = new_conditions)
+  })
+  
+  
+  output$colourpickers <- renderUI({
+    # number of conditions will equal to num value$btn + 2
+    numcond<- values$btn + 2
+    seqcond <- 1:numcond
+    # make label for number of conditions
+    condition_label <- c("Colour for control/reference", "colour for condition 1")
+    if (values$btn > 0) {
+      additional_label <- paste("Colour for condition", 2:values$btn)
+      condition_label <- c(condition_label, additional_label)
+    }
+    ## how to make a palette..
+    colours_to_plot <- viridis_pal(option = "d")(numcond)
+    lapply(seq(numcond), function(i) {
+      colourInput(inputId = paste0("colour", seqcond[i]), 
+                 label = condition_label[i],
+                   # label = need to figure out
+                  value = colours_to_plot[i])
+       })
   })
   
   pca_plotdata <- reactive({
@@ -624,12 +611,22 @@ output$OriData <-renderRHandsontable({
     
     yaxislabel <- paste0("PC", yaxis, " ", yperc)
     xaxislabel <- paste0("PC", xaxis, " ", xperc)
+    
+    ## colours are stored under input$colours1 : input$coloursn where n is values$btn + 2
+    #plotcolours <- paste0("input$colour", 1:(values$btn+2)) 
+    
+    #plotcolours <- sapply(plotcolours, get) #make charactersinto usable variable names
+    
+    ## how to get this working??
+    plotcolours <- c(input$colour1, input$colour2, input$colour3)
+    print(plotcolours)
     values$plotpca <- ggplot(coords, aes_string(x = paste0('PC', xaxis), y = paste0('PC', yaxis))) + #accept selectInput to choose axes!
       geom_point(size=3, aes_string(fill="condition.Condition", shape="condition.Condition")) + 
       stat_ellipse(geom = "polygon", alpha=.2, aes_string(color="condition.Condition", fill="condition.Condition")) +
-      scale_color_manual(values=c(input$control_col, input$cond1_col, input$cond2_col)) + #pick colours for colour picker
-      scale_fill_manual(values=c(input$control_col, input$cond1_col, input$cond2_col)) +
-      scale_shape_manual(values=c(22, 21, 24)) +
+      #scale_color_manual(values=c(input$control_col, input$cond1_col, input$cond2_col)) + #pick colours for colour picker
+      scale_color_manual(values=plotcolours) +
+      scale_fill_manual(values=plotcolours) +
+      #scale_shape_manual(values=c(22, 21, 24)) +
       scale_x_continuous(name=xaxislabel) + # labels depend on selected PCs
       scale_y_continuous(name=yaxislabel) +
       theme(legend.position = "bottom", legend.title = element_blank()) 
