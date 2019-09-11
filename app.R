@@ -12,7 +12,7 @@ library(limma)
 library(ggdendro)
 library(dendextend)
 library(viridis)
-
+library(LaCroixColoR) #devtools::install_github("johannesbjork/LaCroixColoR")
 ###########
 ## TO DO ##
 ###########
@@ -165,7 +165,7 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                                     #horizontal line
                                     tags$hr(),
                                     textInput("control", "Input control condition", "Enter control/reference condition name"),
-                                    textInput("othercond", "Input other condition", "Enter test condition name"),
+                                    textInput("othercond", "Input condition 1", "Enter test condition name"),
                                     #conditionalPanel(
                                     #  condition = "input.moreconditions == 'yes'",
                                     #  textInput("othercond2", "Input other condition", "Enter other test condition name")),
@@ -176,6 +176,7 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                                     tags$div(id = 'placeholder'),
                                     actionButton("addcond", "Add additional condition"), 
                                     actionButton("rmvcond", "Remove added condition"), # these are ugly
+                                    tags$hr(),
                                     radioButtons("format", "Manual or auto condition formatting?",
                                                  c("Manual" = "manual",
                                                    "Auto" = "auto"), selected="manual"),
@@ -214,15 +215,15 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                           
                           fluidRow(
                             column(12,
-                          plotOutput("clustDendro")
+                          plotOutput("clustDendro", width = '90%')
                             )
                           ),
                           
                           fluidRow(
                             column(6,
-                                   colourInput("control_coldend", "Colour for control/reference condition", "#67A7C1"),
-                                   colourInput("cond1_coldend", "Colour for condition 1", "#FF6F59"),
-                                   colourInput("cond2_coldend", "Colour for condition 2", "#292F36"),
+                                   #colourInput("control_coldend", "Colour for control/reference condition", "#67A7C1"),
+                                   #colourInput("cond1_coldend", "Colour for condition 1", "#FF6F59"),
+                                   #colourInput("cond2_coldend", "Colour for condition 2", "#292F36"),
                                    uiOutput("colourpickers2")
                             ),
                             column(6,
@@ -453,13 +454,14 @@ output$OriData <-renderRHandsontable({
     numcond<- values$btn + 2
     seqcond <- 1:numcond
     # make label for number of conditions
-    condition_label <- c("Colour for control/reference", "colour for condition 1")
+    condition_label <- c("Colour for control/reference", "Colour for condition 1")
     if (values$btn > 0) {
       additional_label <- paste("Colour for condition", 2:values$btn)
       condition_label <- c(condition_label, additional_label)
     }
     ## how to make a palette..
-    colours_to_plot <- viridis_pal(option = "D")(numcond)
+    #colours_to_plot <- viridis_pal(option = "D")(numcond)
+    colours_to_plot <- lacroix_palette("Pamplemousse", n = numcond, type = "continuous")
     lapply(seq(numcond), function(i) {
       colourInput(inputId = paste0("colour", seqcond[i]), 
                  label = condition_label[i],
@@ -480,7 +482,8 @@ output$OriData <-renderRHandsontable({
       condition_label <- c(condition_label, additional_label)
     }
     ## how to make a palette..
-    colours_to_plot <- viridis_pal(option = "D")(numcond)
+    colours_to_plot <- lacroix_palette("Pamplemousse", n = numcond, type = "continuous") 
+    #colours_to_plot <- viridis_pal(option = "D")(numcond)
     lapply(seq(numcond), function(i) {
       colourInput(inputId = paste0("colour2_", seqcond[i]), 
                   label = condition_label[i],
@@ -618,6 +621,13 @@ output$OriData <-renderRHandsontable({
     plotcolours <- paste0("input$colour", 1:(values$btn+2)) 
     ## to change the character vector into object names
     plotcolours <- unlist(lapply(plotcolours,function(s) eval(parse(text=s)))) 
+    ## prefer to use shapes that can be filled in...
+    if (values$btn < 4) {
+      shapes <- c(21,22,23,24,25)
+    } else {
+      shapes <- c(1:25)
+    }
+    shapes2use <- shapes[1:(values$btn+2)]
     values$plotpca <- ggplot(coords, aes_string(x = paste0('PC', xaxis), y = paste0('PC', yaxis))) + #accept selectInput to choose axes!
       geom_point(size=3, aes_string(fill="condition.Condition", shape="condition.Condition")) + 
       stat_ellipse(geom = "polygon", alpha=.2, aes_string(color="condition.Condition", fill="condition.Condition")) +
@@ -625,6 +635,7 @@ output$OriData <-renderRHandsontable({
       scale_color_manual(values=plotcolours) +
       scale_fill_manual(values=plotcolours) +
       #scale_shape_manual(values=c(22, 21, 24)) +
+      scale_shape_manual(values=shapes2use) +
       scale_x_continuous(name=xaxislabel) + # labels depend on selected PCs
       scale_y_continuous(name=yaxislabel) +
       theme(legend.position = "bottom", legend.title = element_blank()) 
@@ -666,9 +677,9 @@ output$OriData <-renderRHandsontable({
      dend <- log_exp %>% t() %>% dist(method = dist_method) %>% 
       hclust(method = hclust_method) %>% as.dendrogram() %>%
       set("leaves_pch", 19) %>% 
-      set("leaves_cex", 5)
+      #set("leaves_cex", 5) %>%
       set("leaves_col", condcolours$Colour, order_value = TRUE)
-    dend <- as.ggdend(dend)  
+    dend <- as.ggdend(dend, horiz=T)  
     values$dendro <- ggplot(dend)
   }) 
   
