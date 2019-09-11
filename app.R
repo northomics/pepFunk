@@ -1,3 +1,7 @@
+### to deploy on shinyapps.io
+#library(rsconnect)
+#rsconnect::deployApp('~/projects/annotation/shinyapp')
+
 library(rhandsontable)
 library(shiny)
 library(shinyWidgets)
@@ -53,7 +57,8 @@ pathway_kegg <- dlply(kegg_L3 %>% dplyr::select(L4_desc, L3), .(L4_desc))
 ## Core kegg database
 core_pep_kegg <- read.delim2("core_pep_kegg.csv", 
                              sep=",", header=F, col.names = c("pep", "kegg", "count", "eval"))
-core_pep_kegg <- core_pep_kegg %>% dplyr::group_by(pep) %>% 
+core_pep_kegg_only <- core_pep_kegg %>% dplyr::group_by(pep) %>% select(pep, kegg)
+core_pep_kegg <- core_pep_kegg %>% dplyr::group_by(pep) %>%
   dplyr::summarize(total = sum(count))  %>%
   merge(., core_pep_kegg, by='pep', all.y=T) %>%
   dplyr::mutate(prop = count/total) %>% dplyr::select(pep, kegg, prop)
@@ -262,12 +267,14 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                                          radioButtons('plotsig', "Only plot significantly enriched KEGG?",
                                                       c('Yes' = 'y',
                                                         'No' = 'n'),
-                                                      selected = 'n'),
+                                                      selected = 'y'),
                                          conditionalPanel(
                                            condition = "input.plotsig == 'y'",
                                            textInput("pvalthresh", "P-value threshold for plotting", "0.05")),
                                          actionButton('genplotheat', 'Generate/update heatmap'),
-                                         downloadButton('downloadPlot','Download heatmap')
+                                         downloadButton('downloadPlot','Download heatmap'),
+                                         tags$hr(),
+                                         downloadButton('downloadKEGG', 'Download peptide annotation')
                             ),
                             mainPanel(
                               plotOutput("heatmapPlot")
@@ -518,7 +525,7 @@ output$OriData <-renderRHandsontable({
     if (input$plotsig == 'y') {
       pval <- as.numeric(input$pvalthresh)
     } else {
-      pval <- 0.05 ## change this eventually
+      pval <- 1.1 ## change this eventually
     }
     DEgeneSets <- topTable(fit, coef=2:ncol(design), number=Inf,
                            p.value=pval, adjust="BH")
@@ -665,10 +672,7 @@ output$OriData <-renderRHandsontable({
     new_conditions <- values$data # this is a dataframe with Samples, Conditions
     new_samples <- new_conditions$Samples
     condcolours <- data.frame(Condition = condition_options, Colour = plotcolours)
-    print(new_conditions)
-    print(condcolours)
     condcolours <- merge(new_conditions, condcolours, by = "Condition")
-    print(condcolours)
     # condcolours <- conditions %>% mutate(Colour = case_when(
   #    Condition == input$control ~ input$colour2_1,
   #    Condition == input$othercond ~ input$colour2_2,
@@ -701,14 +705,22 @@ output$OriData <-renderRHandsontable({
   
   output$dlPCA <- downloadHandler(
     filename = function(){
-      paste('pcaPlot','.png',sep='')
+      paste0('pcaPlot','.png',sep='')
     }, 
     content = function(file){
       ggsave(file,plot=values$plotpca)
     })
-  
+ 
+  output$downloadKEGG <- downloadHandler(
+    filename = function(){
+      paste0('peptide_annotation', '.txt')
+    },
+    content = function(file){
+      write.table(core_pep_kegg_only, file, row.names = F, quote = F)}
+  )
+   
 })
 
-
+  
 
 shinyApp(ui, server)
