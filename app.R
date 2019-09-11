@@ -11,6 +11,7 @@ library(GSVA)
 library(limma)
 library(ggdendro)
 library(dendextend)
+library(viridis)
 
 ###########
 ## TO DO ##
@@ -165,17 +166,16 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                                     tags$hr(),
                                     textInput("control", "Input control condition", "Enter control/reference condition name"),
                                     textInput("othercond", "Input other condition", "Enter test condition name"),
-                                    conditionalPanel(
-                                      condition = "input.moreconditions == 'yes'",
-                                      textInput("othercond2", "Input other condition", "Enter other test condition name")),
-                                    radioButtons("moreconditions", "Do you have more conditions?",
-                                                 c("Yes" = "yes",
-                                                   "No" = "no"), selected="no"),
+                                    #conditionalPanel(
+                                    #  condition = "input.moreconditions == 'yes'",
+                                    #  textInput("othercond2", "Input other condition", "Enter other test condition name")),
+                                    #radioButtons("moreconditions", "Do you have more conditions?",
+                                    #             c("Yes" = "yes",
+                                    #               "No" = "no"), selected="no"),
                                     #allow additional conditions, get this working after...
-                                    actionButton("addcond", "Add additional condition"), actionButton("rmvcond", "Remove added condition"), # these are ugly
                                     tags$div(id = 'placeholder'),
-                                    verbatimTextOutput("value", placeholder = T),
-                                    
+                                    actionButton("addcond", "Add additional condition"), 
+                                    actionButton("rmvcond", "Remove added condition"), # these are ugly
                                     radioButtons("format", "Manual or auto condition formatting?",
                                                  c("Manual" = "manual",
                                                    "Auto" = "auto"), selected="manual"),
@@ -222,7 +222,8 @@ ui <- navbarPage("Peptide-centric metaproteomic workflow",
                             column(6,
                                    colourInput("control_coldend", "Colour for control/reference condition", "#67A7C1"),
                                    colourInput("cond1_coldend", "Colour for condition 1", "#FF6F59"),
-                                   colourInput("cond2_coldend", "Colour for condition 2", "#292F36")
+                                   colourInput("cond2_coldend", "Colour for condition 2", "#292F36"),
+                                   uiOutput("colourpickers2")
                             ),
                             column(6,
                                    selectInput("dist_method", label = "Distance method:",
@@ -386,15 +387,6 @@ output$OriData <-renderRHandsontable({
   })
   
   
-  ## Maybe we should make a single reactive for "normal" data manipulation    
-  #  pca_data <- reactive({
-  #    if (is.null(get_data())) {
-  #      return()
-  #    }
-  #    exp_data <- get_data()
-  #    })
-  
-  
   get_plotdata <- reactive({
     if (is.null(get_data())) {
       return()
@@ -455,7 +447,7 @@ output$OriData <-renderRHandsontable({
     list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, new_conditions = new_conditions)
   })
   
-  
+  ## for the PCA
   output$colourpickers <- renderUI({
     # number of conditions will equal to num value$btn + 2
     numcond<- values$btn + 2
@@ -467,7 +459,7 @@ output$OriData <-renderRHandsontable({
       condition_label <- c(condition_label, additional_label)
     }
     ## how to make a palette..
-    colours_to_plot <- viridis_pal(option = "d")(numcond)
+    colours_to_plot <- viridis_pal(option = "D")(numcond)
     lapply(seq(numcond), function(i) {
       colourInput(inputId = paste0("colour", seqcond[i]), 
                  label = condition_label[i],
@@ -475,7 +467,28 @@ output$OriData <-renderRHandsontable({
                   value = colours_to_plot[i])
        })
   })
-  
+ 
+  # for the dendrogram
+  output$colourpickers2 <- renderUI({
+    # number of conditions will equal to num value$btn + 2
+    numcond<- values$btn + 2
+    seqcond <- 1:numcond
+    # make label for number of conditions
+    condition_label <- c("Colour for control/reference", "colour for condition 1")
+    if (values$btn > 0) {
+      additional_label <- paste("Colour for condition", 2:values$btn)
+      condition_label <- c(condition_label, additional_label)
+    }
+    ## how to make a palette..
+    colours_to_plot <- viridis_pal(option = "D")(numcond)
+    lapply(seq(numcond), function(i) {
+      colourInput(inputId = paste0("colour2_", seqcond[i]), 
+                  label = condition_label[i],
+                  # label = need to figure out
+                  value = colours_to_plot[i])
+    })
+  })
+   
   pca_plotdata <- reactive({
     log_exp <- get_plotdata()[['exp_data']]
     new_conditions <- values$data # getting the condition data from user's manual input
@@ -483,20 +496,9 @@ output$OriData <-renderRHandsontable({
     sampleVals<-data.frame(pca$x)
     exprVals<-data.frame(pca$rotation)
     PoV <- (pca$sdev^2/sum(pca$sdev^2))*100
-    
-    # Make is so that it loops through all possibilities
-    #for (i in length(PoV)){
-    #  
-    #}
-    
-    # need to make this more general
     coords<-data.frame(sampleVals, condition = new_conditions,
                        samplename = rownames(sampleVals))
-    #values$numPCs <- paste0("PC", 1:length(PoV))
     numPCs <- 1:length(PoV)
-    #print(numPCs)
-    ## dropdown for selecting which PC we want to plot
-    
     list(coords = coords, PoV = PoV, numPCs=numPCs)
   })
   
@@ -613,13 +615,9 @@ output$OriData <-renderRHandsontable({
     xaxislabel <- paste0("PC", xaxis, " ", xperc)
     
     ## colours are stored under input$colours1 : input$coloursn where n is values$btn + 2
-    #plotcolours <- paste0("input$colour", 1:(values$btn+2)) 
-    
-    #plotcolours <- sapply(plotcolours, get) #make charactersinto usable variable names
-    
-    ## how to get this working??
-    plotcolours <- c(input$colour1, input$colour2, input$colour3)
-    print(plotcolours)
+    plotcolours <- paste0("input$colour", 1:(values$btn+2)) 
+    ## to change the character vector into object names
+    plotcolours <- unlist(lapply(plotcolours,function(s) eval(parse(text=s)))) 
     values$plotpca <- ggplot(coords, aes_string(x = paste0('PC', xaxis), y = paste0('PC', yaxis))) + #accept selectInput to choose axes!
       geom_point(size=3, aes_string(fill="condition.Condition", shape="condition.Condition")) + 
       stat_ellipse(geom = "polygon", alpha=.2, aes_string(color="condition.Condition", fill="condition.Condition")) +
@@ -634,20 +632,41 @@ output$OriData <-renderRHandsontable({
   }) 
   
   observeEvent(input$genclustdendro, {
-  #observe({
+    if (values$btn > 0) {
+      additional_conds <- additional_conds()
+      condition_options <- c(input$control, input$othercond, additional_conds())
+    } else {
+      condition_options <- c(input$control, input$othercond)
+    }
+    ## colours are stored under input$colours1 : input$coloursn where n is values$btn + 2
+    plotcolours <- paste0("input$colour2_", 1:(values$btn+2)) 
+    ## to change the character vector into object names
+    plotcolours <- unlist(lapply(plotcolours,function(s) eval(parse(text=s)))) 
     log_exp <- get_plotdata()[['exp_data']]
     dist_method <- input$dist_method
     hclust_method <- input$hclust_method
     dd <- dist(log_exp %>% t(), method = dist_method) # be able to chose distance
     hc <- hclust(dd, method = hclust_method) # be able to chose method
-    condcolours <- values$data %>% mutate(Colour = case_when(
-      Condition == input$control ~ input$control_coldend,
-      Condition == input$othercond ~ input$cond1_coldend,
-      Condition == input$othercond2 ~ input$cond2_coldend)
-      )
-    dend <- log_exp %>% t() %>% dist(method = dist_method) %>% 
+    #conditions <- values$data
+    #condition_options <- unique(conditions)
+    #conditions <- purrr::map(condition_options, plotcolours)
+    #condcolours <- conditions %>% mutate(Colour = case_when(!!!conditions))
+    new_conditions <- values$data # this is a dataframe with Samples, Conditions
+    new_samples <- new_conditions$Samples
+    condcolours <- data.frame(Condition = condition_options, Colour = plotcolours)
+    print(new_conditions)
+    print(condcolours)
+    condcolours <- merge(new_conditions, condcolours, by = "Condition")
+    print(condcolours)
+    # condcolours <- conditions %>% mutate(Colour = case_when(
+  #    Condition == input$control ~ input$colour2_1,
+  #    Condition == input$othercond ~ input$colour2_2,
+  #    Condition == input$othercond2 ~ input$colour2_3)
+  #  )    
+     dend <- log_exp %>% t() %>% dist(method = dist_method) %>% 
       hclust(method = hclust_method) %>% as.dendrogram() %>%
-      set("leaves_pch", 19) %>%
+      set("leaves_pch", 19) %>% 
+      set("leaves_cex", 5)
       set("leaves_col", condcolours$Colour, order_value = TRUE)
     dend <- as.ggdend(dend)  
     values$dendro <- ggplot(dend)
