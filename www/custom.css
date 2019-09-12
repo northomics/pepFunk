@@ -1,0 +1,63 @@
+.main-header .logo {
+	font-family: "Calibri","Georgia", Times, "Times New Roman", serif;
+	font-weight: bold;
+	font-size: 24px;
+}
+
+
+.skin-blue .main-sidebar {
+	font-family: "Calibri";
+	font-size:18px;
+	line-height:1.42857143;
+	color:#ebebeb;
+}
+
+
+.skin-blue .main-header .logo {
+	background-color: #404040;
+}
+
+/* logo when hovered */
+.skin-blue .main-header .logo:hover {
+	background-color: #404040;
+}
+
+/* navbar (rest of the header) */
+.skin-blue .main-header .navbar {
+	background-color: #404040;
+}        
+
+.skin-blue .main-sidebar {
+	background-color: #302F2F;
+}
+
+/* setup the primay box color */
+.box.box-solid.box-primary>.box-header {
+  color:#fff;
+  background:#666666
+}
+
+.box.box-solid.box-primary{
+	border-bottom-color:#666666;
+	border-left-color:#666666;
+	border-right-color:#666666;
+	border-top-color:#666666;
+}
+
+/* setup all box header width */
+.box-header {
+    color: #444444;
+    display: block;
+    padding: 6px;
+    position: relative;
+}
+
+img {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+
+
+
+
