@@ -112,6 +112,16 @@ observeEvent(input$runButton, {
 })
 
 
+output$gotoanalysisbutton <- renderUI({
+  if (is.null(get_data())) {
+    return()
+  }
+  actionButton("gotoanalysis", 
+icon = icon("arrow-right"),
+label = "Continue to peptide centric analysis!",
+style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4")
+})
+
 get_plotdata <- reactive({
   if (is.null(get_data())) {
     return()

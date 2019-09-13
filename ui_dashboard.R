@@ -1,3 +1,4 @@
+library(shiny)
 fluidPage(
           fluidRow(
                     box(title = "Peptide data input",
@@ -40,19 +41,21 @@ fluidPage(
                      collapsible = FALSE,
                         rHandsontableOutput('OriData')
                  ),
-                 conditionalPanel(
-                   condition = "output.fileUploaded1 == TRUE",
+                 
+#                 conditionalPanel(
+#                   condition = "output.fileUploaded1 == TRUE",
                    box(status = "primary", 
                        width =  8,
                        solidHeader = FALSE,
-                       collapsible = FALSE,
-                       actionButton("gotoanalysis", 
-                                    icon = icon("arrow-right"),
-                                    label = "Go to peptide centric analysis!",
-                                    style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4"
-                       )
-                   )
-                 )
+                       collapsible = FALSE, 
+                       uiOutput("gotoanalysisbutton"))
+#                       actionButton("gotoanalysis", 
+#                                    icon = icon("arrow-right"),
+#                                    label = "Continue to peptide centric analysis!",
+#                                    style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4"
+#                       )
+                  
+            
                  
           )
 )
