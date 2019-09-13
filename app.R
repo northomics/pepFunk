@@ -127,7 +127,7 @@ body <- dashboardBody(
     tabItem(tabName = "about",
             fluidRow(
               box(
-                title = "About Differential Protein Analyzer", 
+                title = "About protein-centric metaproteomic workflows...", 
                 solidHeader = TRUE,
                 status = "primary", 
                 width = 12,
