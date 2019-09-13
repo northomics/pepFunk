@@ -133,30 +133,34 @@ get_plotdata <- reactive({
   #    ## $newpep_name
   core_kegg <- exp_data %>% as.data.frame() %>% 
     rownames_to_column(., var='pep') %>%
-    merge(., core_pep_kegg, by='pep') %>% 
+    merge(., core_pep_kegg, by='pep', all.x=T) %>% 
     mutate(prop=replace(prop, is.na(prop), 1)) %>%
     mutate_each(funs(.*prop), starts_with('Intensity')) %>% #multiplies the intensities by the proportion 
-    column_to_rownames(., var='newpep_name') %>%
+    mutate(correct_pep = case_when(is.na(newpep_name) ~ pep,
+                                   !is.na(newpep_name) ~ newpep_name)) %>%
+    column_to_rownames(., var='correct_pep') %>%
     dplyr::select(starts_with('Intensity'))
   
   colnames(core_kegg) <-  removeintensity
   norm_pep <- estimateSizeFactorsForMatrix(core_kegg) 
   exp_data <- sweep(as.matrix(core_kegg), 2, norm_pep, "/")
   peptides <- rownames(exp_data)
-  exp_data <- core_kegg %>% #dplyr::select(starts_with('Intensity')) %>%
+  exp_data <- data.frame(exp_data) %>% #dplyr::select(starts_with('Intensity')) %>%
     mutate_all(., funs(log(1 + .))) # %>% ##should be log10 data...
   rownames(exp_data) <- peptides
   
   
   # applying function over our pathway list
   kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg', core_pep_kegg = core_pep_kegg) 
-  ## shiny app has a UI, server function, then call to the shiny app...
+  
   
   ## need to be able to change this
   control_cond <- input$control
   ## make into a function
+  print(class(exp_data))
   gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                     kcdf='Gaussian') ## rnaseq=F because we have continuous data
+  
   new_conditions <- values$data
   new_samples <- new_conditions$Samples
   cond <- factor(new_conditions$Condition) %>% relevel(control_cond) # DMSO is the control
@@ -301,7 +305,7 @@ observeEvent(input$genplotheat,{
       geom_tile(na.rm = TRUE) +
       xlab(label = "Sample") +
       ylab(label="") +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1), plot.margin = margin(6,.8,6,.8, "cm"))
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
   }
 }) 
 
