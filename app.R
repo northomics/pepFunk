@@ -11,9 +11,11 @@ library(DESeq2)
 library(GSVA)
 library(limma)
 library(ggdendro)
+library(plotly)
 library(dendextend)
-library(viridis)
 library(LaCroixColoR) #devtools::install_github("johannesbjork/LaCroixColoR")
+library(shinycssloaders)
+
 
 # install.packages.auto(rhandsontable)
 # devtools::install_github("johannesbjork/LaCroixColoR")
@@ -133,7 +135,12 @@ body <- dashboardBody(
                 width = 12,
                 "Welcome to the Peptide-Centric Analyst!",
                 br(),
-                "Here you can write down information about your app"
+                "Peptide-Centric Analyst alls you to complete a peptide-focused functional enrichment workflow for gut microbiome metaproteomic studies.
+                
+                This workflow uses KEGG annotation for pathway enrichment, along with an adapted Gene Set Variation Analysis (GSVA).
+                
+                By completing analysis on peptides, rather than proteins, we lose less information and retain more statistical power.
+              "
               )
             )   
     )

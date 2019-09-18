@@ -30,7 +30,7 @@ observeEvent(input$addcond, {
     ui = tags$div( #wrapping in a div with id for ease of removal
       id = paste0('line', values$btn),
       textInput(paste0("otherConditions", values$btn + 1),
-                label = paste("Condition", values$btn + 1), value = ""
+                label = paste("Input Condition", values$btn + 1), value = ""
       )
     )
   )
@@ -41,11 +41,18 @@ observeEvent(input$addcond, {
 
 ## allow removal of added condition
 observeEvent(input$rmvcond, {
+  if (values$btn > 0){
   removeUI(
     ## pass in appropriate div id
     selector = paste0('#line', values$btn)
   )
-  values$btn <- values$btn - 1 
+  values$btn <- values$btn - 1
+  } else {
+    showNotification(
+      "You cannot remove any more conditions.",
+      duration = 5,
+      type = "error") 
+  }
 })  
 
 
@@ -65,7 +72,7 @@ additional_conds <- reactive({
 get_data <- reactive({
   inFile <- input$file1
   validate(
-    need(inFile != "", "Please upload a dataset")
+    need(inFile != "", "Please upload a dataset.")
   )
   exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
     as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
@@ -107,9 +114,17 @@ output$OriData <-renderRHandsontable({
 
 
 
-observeEvent(input$runButton, {
-  values$data <-  hot_to_r(input$OriData)
-})
+#observeEvent(input$runButton, {
+#  values$data <-  hot_to_r(input$OriData)
+#  
+#})
+
+observeEvent(
+  input$gotoanalysis, {
+    values$data <-  hot_to_r(input$OriData)
+    updateTabItems(session, "tabs", "Analysis")
+  }
+)
 
 
 output$gotoanalysisbutton <- renderUI({
@@ -156,7 +171,7 @@ get_plotdata <- reactive({
   exp_data <- sweep(as.matrix(core_kegg), 2, norm_pep, "/")
   peptides <- rownames(exp_data)
   exp_data <- data.frame(exp_data) %>% #dplyr::select(starts_with('Intensity')) %>%
-    mutate_all(., funs(log(1 + .))) # %>% ##should be log10 data...
+    mutate_all(., funs(log10(1 + .))) # %>% ##should be log10 data...
   rownames(exp_data) <- peptides
   
   
@@ -214,7 +229,7 @@ output$colourpickers2 <- renderUI({
   numcond<- values$btn + 2
   seqcond <- 1:numcond
   # make label for number of conditions
-  condition_label <- c("Colour for control/reference", "colour for condition 1")
+  condition_label <- c("Colour for control/reference", "Colour for condition 1")
   if (values$btn > 0) {
     additional_label <- paste("Colour for condition", 2:values$btn)
     condition_label <- c(condition_label, additional_label)
@@ -304,7 +319,7 @@ observeEvent(input$genplotheat,{
       geom_tile(na.rm = TRUE) +
       xlab(label = "Sample") +
       ylab(label="") +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1), plot.margin = margin(6,.8,6,.8, "cm"))
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
     
   } else {
     values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
@@ -318,16 +333,6 @@ observeEvent(input$genplotheat,{
       theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
   }
 }) 
-
-# yaxis_pcObs <- reactive({
-#   if (is.null(input$y_axisPC)){
-#     yaxis <- "PC2" # how do you make this work?
-#   } else {
-#   yaxis <- input$y_axisPC 
-#   }
-#   print(yaxis)
-# })
-
 
 
 observeEvent(input$genplotpca, {
@@ -396,32 +401,38 @@ observeEvent(input$genclustdendro, {
   hclust_method <- input$hclust_method
   dd <- dist(log_exp %>% t(), method = dist_method) # be able to chose distance
   hc <- hclust(dd, method = hclust_method) # be able to chose method
-  #conditions <- values$data
-  #condition_options <- unique(conditions)
-  #conditions <- purrr::map(condition_options, plotcolours)
-  #condcolours <- conditions %>% mutate(Colour = case_when(!!!conditions))
   new_conditions <- values$data # this is a dataframe with Samples, Conditions
   new_samples <- new_conditions$Samples
   condcolours <- data.frame(Condition = condition_options, Colour = plotcolours)
   condcolours <- merge(new_conditions, condcolours, by = "Condition")
-  # condcolours <- conditions %>% mutate(Colour = case_when(
-  #    Condition == input$control ~ input$colour2_1,
-  #    Condition == input$othercond ~ input$colour2_2,
-  #    Condition == input$othercond2 ~ input$colour2_3)
-  #  )    
+  print(condcolours$Colour %>% as.character())
   dend <- log_exp %>% t() %>% dist(method = dist_method) %>% 
     hclust(method = hclust_method) %>% as.dendrogram() %>%
     set("leaves_pch", 19) %>% 
-    #set("leaves_cex", 5) %>%
-    set("leaves_col", condcolours$Colour, order_value = TRUE)
+    set("leaves_col", as.character(condcolours$Colour), order_value = T)
   dend <- as.ggdend(dend, horiz=T)  
   values$dendro <- ggplot(dend)
 }) 
 
 ## plotting 
-output$clustDendro <- renderPlot({values$dendro}, height='auto')
-output$heatmapPlot <- renderPlot({values$plotheat}, height='auto')
-output$pcaPlot <- renderPlot({values$plotpca}, height='auto')
+output$clustDendro <- renderPlotly({
+  validate(
+    need(input$genclustdendro, "Please push button to cluster samples and plot or update dendrogram.")
+  )
+    ggplotly(values$dendro)})
+output$heatmapPlot <- renderPlotly({
+  
+  validate(
+    need(input$genplotheat, "Please push button to start analysis and generate or update heatmap.")
+  )
+  
+  ggplotly(values$plotheat)})
+
+output$pcaPlot <- renderPlotly({
+  validate(
+    need(input$genplotpca, "Please push button to start analysis and generate or update PCA biplot.")
+  )
+  ggplotly(values$plotpca)})
 
 ## organizing plot download handlers
 output$downloadPlot <- downloadHandler(
@@ -448,10 +459,4 @@ output$downloadKEGG <- downloadHandler(
   },
   content = function(file){
     write.table(core_pep_kegg_only, file, row.names = F, quote = F)}
-)
-
-observeEvent(
-  input$gotoanalysis, {
-    updateTabItems(session, "tabs", "Analysis")
-  }
 )

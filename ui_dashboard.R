@@ -30,9 +30,9 @@ fluidPage(
                         tags$hr(),
                         radioButtons("format", "Manual or auto condition formatting?",
                                      c("Manual" = "manual",
-                                       "Auto" = "auto"), selected="manual"),
-                        tags$hr(),
-                        actionButton("runButton","Set condition information")
+                                       "Auto" = "auto"), selected="manual") # ,
+                        #tags$hr(),
+                        #actionButton("runButton","Set condition information")
                  ),
                  box(title = "Editing sample names and conditions",
                      status = "primary", 

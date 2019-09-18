@@ -2,7 +2,7 @@ tabBox(
   width = 12,
   tabPanel("PCA",
            fluidRow(
-             column(12, plotOutput("pcaPlot")))
+             column(12, plotlyOutput("pcaPlot") %>% withSpinner()))
            ,
            #uiOutput("y_axisPC"), # get back to this but see if this is the issue first
            fluidRow(
@@ -29,7 +29,7 @@ tabBox(
            
            fluidRow(
              column(12,
-                    plotOutput("clustDendro", width = '90%')
+                    plotlyOutput("clustDendro")
              )
            ),
            
@@ -87,7 +87,7 @@ tabBox(
                           downloadButton('downloadKEGG', 'Download peptide annotation')
              ),
              mainPanel(
-               plotOutput("heatmapPlot")
+               plotlyOutput("heatmapPlot")
              )
            )
   )
