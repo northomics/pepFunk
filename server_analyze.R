@@ -77,6 +77,7 @@ get_data <- reactive({
   exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
     as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
   exp_data[exp_data==1] <-NA
+
   exp_data
 })
 
@@ -85,9 +86,9 @@ get_data <- reactive({
 output$OriData <-renderRHandsontable({
   if (values$btn > 0) {
     additional_conds <- additional_conds()
-    condition_options <- c(input$control, input$othercond, additional_conds())
+    condition_options <- c(input$control, input$othercond, additional_conds(), "NA")
   } else {
-    condition_options <- c(input$control, input$othercond)
+    condition_options <- c(input$control, input$othercond, "NA")
   }
   
   if (input$format == "auto"){
@@ -105,7 +106,8 @@ output$OriData <-renderRHandsontable({
     samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
     x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep("NA", length(samplenames))), 
                     stringsAsFactors = FALSE)
-    rhandsontable(x) %>%
+   
+     rhandsontable(x) %>%
       hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
   }
 } 
@@ -146,6 +148,12 @@ get_plotdata <- reactive({
   
   exp_data <- get_data()  
   removeintensity <- colnames(exp_data) %>% substr(., 11, nchar(.))
+  
+  ## allow users to ignore samples
+  new_conditions <- values$data
+  ignore_cols <- is.na(new_conditions$Condition)
+  exp_data <- exp_data[,-ignore_cols]
+   print(exp_data %>% colnames())
   ### will need to uncomment 
   #    # exp_data = filter_valids(exp_data,
   #    #   conditions = c('DMSO', 'High', 'Low'),
@@ -182,13 +190,14 @@ get_plotdata <- reactive({
   ## need to be able to change this
   control_cond <- input$control
   ## make into a function
-  print(class(exp_data))
+  
   gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                     kcdf='Gaussian') ## rnaseq=F because we have continuous data
   
-  new_conditions <- values$data
-  new_samples <- new_conditions$Samples
-  cond <- factor(new_conditions$Condition) %>% relevel(control_cond) # DMSO is the control
+  
+  new_samples <- new_conditions$Samples[!is.na(new_conditions$Condition)]
+  conditions <- new_conditions$Condition[!is.na(new_conditions$Samples)]
+  cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
   #print(cond)
   design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
   colnames(design)[1] <- c(control_cond) 
