@@ -147,13 +147,17 @@ get_plotdata <- reactive({
   #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
   
   exp_data <- get_data()  
-  removeintensity <- colnames(exp_data) %>% substr(., 11, nchar(.))
   
   ## allow users to ignore samples
   new_conditions <- values$data
-  ignore_cols <- is.na(new_conditions$Condition)
-  exp_data <- exp_data[,-ignore_cols]
-   print(exp_data %>% colnames())
+  
+  if (any("NA"==new_conditions$Condition)) { # only subset the dataframe if use input NA
+    ignore_cols <- which(new_conditions$Condition == "NA")
+    exp_data <- exp_data[,-ignore_cols]
+  }
+  
+  removeintensity <- colnames(exp_data) %>% substr(., 11, nchar(.))
+  
   ### will need to uncomment 
   #    # exp_data = filter_valids(exp_data,
   #    #   conditions = c('DMSO', 'High', 'Low'),
@@ -195,8 +199,10 @@ get_plotdata <- reactive({
                     kcdf='Gaussian') ## rnaseq=F because we have continuous data
   
   
-  new_samples <- new_conditions$Samples[!is.na(new_conditions$Condition)]
-  conditions <- new_conditions$Condition[!is.na(new_conditions$Samples)]
+  new_samples <- new_conditions$Samples[-ignore_cols]
+  print(new_samples)
+  conditions <- new_conditions$Condition[-ignore_cols]
+  print(conditions)
   cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
   #print(cond)
   design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
@@ -207,7 +213,9 @@ get_plotdata <- reactive({
   fit <- eBayes(fit, trend=T)
   
   colnames(exp_data) <- new_samples
-  list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, new_conditions = new_conditions)
+  new_conditions <- data.frame(new_samples, conditions)
+  list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, conditions = conditions,
+       new_conditions = new_conditions)
 })
 
 ## for the PCA
@@ -256,7 +264,7 @@ output$colourpickers2 <- renderUI({
 
 pca_plotdata <- reactive({
   log_exp <- get_plotdata()[['exp_data']]
-  new_conditions <- values$data # getting the condition data from user's manual input
+  new_conditions <- get_plotdata()[['conditions']] # getting the condition data from user's manual input
   pca<- prcomp(t(log_exp), center=T, scale=F)
   sampleVals<-data.frame(pca$x)
   exprVals<-data.frame(pca$rotation)
@@ -301,11 +309,11 @@ observeEvent(input$genplotheat,{
   
   
   sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% sigpathways$Pathway,]
-  gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
-    melt(., id='Pathway') %>%
-    merge(., new_conditions, by.x='variable', by.y = 'Samples')
   
-  #clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
+  gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
+    melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'new_samples')
+  print(gsvaplot_data %>% head())
+
   
   ## chosing if we want to plot kegg by p-value or by clustering!
   if (input$kegg_ord == 'clust'){
@@ -315,7 +323,7 @@ observeEvent(input$genplotheat,{
   }
   
   gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = kegg_order)
-  gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
+ # gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
   
   if (input$sample_ord == 'clust'){
     sample_order <- rownames(sig_gsva %>% t())[hclust(dist(sig_gsva %>% t()))$order]
@@ -332,7 +340,7 @@ observeEvent(input$genplotheat,{
     
   } else {
     values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
-      facet_grid(~ Condition, switch='x', scales = "free") +
+      facet_grid(~ conditions, switch='x', scales = "free") +
       #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
       scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
                            space = "Lab", name="GSVA enrichment score") + 
@@ -381,8 +389,8 @@ observeEvent(input$genplotpca, {
   }
   shapes2use <- shapes[1:(values$btn+2)]
   values$plotpca <- ggplot(coords, aes_string(x = paste0('PC', xaxis), y = paste0('PC', yaxis))) + #accept selectInput to choose axes!
-    geom_point(size=3, aes_string(fill="condition.Condition", shape="condition.Condition")) + 
-    stat_ellipse(geom = "polygon", alpha=.2, aes_string(color="condition.Condition", fill="condition.Condition")) +
+    geom_point(size=3, aes_string(fill="condition", shape="condition")) + 
+    stat_ellipse(geom = "polygon", alpha=.2, aes_string(color="condition", fill="condition")) +
     #scale_color_manual(values=c(input$control_col, input$cond1_col, input$cond2_col)) + #pick colours for colour picker
     scale_color_manual(values=plotcolours) +
     scale_fill_manual(values=plotcolours) +
@@ -435,7 +443,7 @@ output$heatmapPlot <- renderPlotly({
     need(input$genplotheat, "Please push button to start analysis and generate or update heatmap.")
   )
   
-  ggplotly(values$plotheat)})
+  ggplotly(values$plotheat, height = 750, width=700})
 
 output$pcaPlot <- renderPlotly({
   validate(
