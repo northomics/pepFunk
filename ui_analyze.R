@@ -66,6 +66,24 @@ tabBox(
   tabPanel("Functional enrichment heatmap",
            sidebarLayout(
              sidebarPanel(width = 3,
+                          radioButtons("restrict_analysis", "Restrict analysis to two comparisons?",
+                                       c("Yes" = "y",
+                                         "No, compare all conditions" = "n"),
+                                       selected = "n"),
+                          uiOutput("control_gsva"),   
+                          uiOutput("treatment_gsva"),
+                          tags$hr(),
+                          #conditionalPanel(
+                          #  condition = "input.restrict_analysis == 'y'",
+                          #  selectInput("treat_gsva_selec", "Select control condition:",
+                          #                              c("test" = "test",
+                          #                                "anothertest" = "atest"))
+                          #),
+#                          conditionalPanel(
+#                           # renderUI("treatment_gsva")
+#                            condition = "input.restrict_analysis == y",
+#                            textInput("treatment_gsva", "Treatment condition:")
+#                          ),
                           colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
                           colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
                           radioButtons("sample_ord", "Order Samples:",
@@ -77,10 +95,10 @@ tabBox(
                           radioButtons('plotsig', "Only plot significantly enriched KEGG?",
                                        c('Yes' = 'y',
                                          'No' = 'n'),
-                                       selected = 'y'),
+                                       selected = 'n'),
                           conditionalPanel(
                             condition = "input.plotsig == 'y'",
-                            textInput("pvalthresh", "P-value threshold for plotting", "0.05")),
+                            textInput("pvalthresh", "Adjusted p-value threshold for plotting", placeholder="0.05")),
                           actionButton('genplotheat', 'Generate/update heatmap'),
                           downloadButton('downloadPlot','Download heatmap'),
                           tags$hr(),

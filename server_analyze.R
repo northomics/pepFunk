@@ -4,23 +4,8 @@
 
 
 
-values <- reactiveValues(btn = 0) # want to start the button count at 0... 
-## be able to add conditions....testing this!!
-## this is not working...
-#  observeEvent(input$addcond, {
-#    condition_options <- c(input$control, input$othercond) 
-#    newcond <- as.character(input$add)
-#    print(newcond)
-#    condition_options <<- c(condition_options, newcond)
-#  })
-#  observeEvent(input$addcond, {
-#    insertUI(
-#      selector = "#addcond",
-#      where = "beforeBegin",
-#      ui = textInput(paste0("txt", input$add),
-#                     "Additional condition")
-#    )
-#  })
+values <- reactiveValues(btn = 0) # want to start the button count at 0 not 1... 
+
 
 observeEvent(input$addcond, {
   values$btn <- values$btn + 1
@@ -37,7 +22,6 @@ observeEvent(input$addcond, {
   
 })
 
-#observe(print(input[['mainDesc1']]))
 
 ## allow removal of added condition
 observeEvent(input$rmvcond, {
@@ -56,14 +40,13 @@ observeEvent(input$rmvcond, {
 })  
 
 
-#output$value <- renderText({ 
+
 additional_conds <- reactive({
   msg <- c(input[["otherConditions"]])
   if (values$btn > 0) {
     for (i in 1:values$btn) {
       msg <- c(as.character(msg), as.character(input[[paste0("otherConditions", i + 1)]]))
     }
-    #new_conds <- paste(msg, collapse = '" , "')  
     new_conds <- msg
     return(new_conds)
   }
@@ -74,10 +57,15 @@ get_data <- reactive({
   validate(
     need(inFile != "", "Please upload a dataset.")
   )
+  if (input$file_fmt == "pep"){
   exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
     as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
   exp_data[exp_data==1] <-NA
-
+  } else {
+  exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+    as.data.frame()
+  exp_data[exp_data==1] <-NA
+  }
   exp_data
 })
 
@@ -90,6 +78,7 @@ output$OriData <-renderRHandsontable({
   } else {
     condition_options <- c(input$control, input$othercond, "NA")
   }
+ 
   
   if (input$format == "auto"){
     exp_data <- get_data()
@@ -113,8 +102,18 @@ output$OriData <-renderRHandsontable({
 } 
 )
 
+#observe(
+#  if (is.null(get_data())) {
+#    return()
+#  }
+#  {if (input$restrict_analysis == "y"){
+#    print("Yes")
+#  } else {
+#    print("No")
+#  }
+#})
 
-
+#
 
 #observeEvent(input$runButton, {
 #  values$data <-  hot_to_r(input$OriData)
@@ -139,6 +138,9 @@ label = "Continue to peptide centric analysis!",
 style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4")
 })
 
+
+
+
 get_plotdata <- reactive({
   if (is.null(get_data())) {
     return()
@@ -155,6 +157,7 @@ get_plotdata <- reactive({
     ignore_cols <- which(new_conditions$Condition == "NA")
     exp_data <- exp_data[,-ignore_cols]
   }
+ 
   
   removeintensity <- colnames(exp_data) %>% substr(., 11, nchar(.))
   
@@ -198,25 +201,74 @@ get_plotdata <- reactive({
   gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                     kcdf='Gaussian') ## rnaseq=F because we have continuous data
   
+  if (exists("ignore_cols")){
+    new_samples <- new_conditions$Samples[-ignore_cols]
+    conditions <- new_conditions$Condition[-ignore_cols]
+  } else {
+    new_samples <- new_conditions$Samples
+    conditions <- new_conditions$Condition
+  }
   
-  new_samples <- new_conditions$Samples[-ignore_cols]
-  print(new_samples)
-  conditions <- new_conditions$Condition[-ignore_cols]
-  print(conditions)
-  cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
-  #print(cond)
-  design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
-  colnames(design)[1] <- c(control_cond) 
-  colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
+
+#  
+  if (input$restrict_analysis == "y"){ # make design matrix for restricted analysis (pairwise comparisons)
+    control <- input$control_gsva_select
+    treatment <- input$treatment_gsva_select
+    new_conditions <- data.frame(new_samples, conditions)
+    new_conditions <- new_conditions[new_conditions$conditions %in% c(control, treatment),]
+    cond <- factor(new_conditions$conditions) %>% relevel(control)
+    design <- model.matrix(~ cond)
+    fit <- lmFit(gsva_kegg[,new_conditions$new_samples], design1)
+    fit<- eBayes(fit, trend=T)
+    
+    #colnames(exp_data) <- new_conditions$new_samples
+    ## need to
+  } else { #plot and analyse ALL the data (no restrictions)
+    cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
+    design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
+    colnames(design)[1] <- c(control_cond) 
+    colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
                                              nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
-  fit <- lmFit(gsva_kegg, design)
-  fit <- eBayes(fit, trend=T)
+    fit <- lmFit(gsva_kegg, design)
+    fit <- eBayes(fit, trend=T)
   
-  colnames(exp_data) <- new_samples
-  new_conditions <- data.frame(new_samples, conditions)
+    colnames(exp_data) <- new_samples
+    new_conditions <- data.frame(new_samples, conditions)
+    }
+  
   list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, conditions = conditions,
        new_conditions = new_conditions)
 })
+
+
+## render options for GSVA
+  output$control_gsva <- renderUI({
+    ## render options for GSVA
+    condition_options <- get_plotdata()[["conditions"]]
+    if (input$restrict_analysis == "y"){
+      select_condition <- factor(condition_options)
+      #names(select_condition) <- condition_options
+      selectInput("control_gsva_select", "Select control condition:",
+                  select_condition)
+    }else{
+      return()
+    }
+  })
+  
+  output$treatment_gsva <- renderUI({
+    ## render options for GSVA
+    condition_options <- get_plotdata()[["conditions"]]
+    if (input$restrict_analysis == "y"){
+      select_condition <- factor(condition_options)
+      #names(select_condition) <- condition_options
+      selectInput("treatment_gsva_select", "Select control condition:",
+                  select_condition)
+    }else{
+      return()
+    }
+  })
+  
+
 
 ## for the PCA
 output$colourpickers <- renderUI({
@@ -292,29 +344,43 @@ observeEvent(input$genplotheat,{
   }
   DEgeneSets <- topTable(fit, coef=2:ncol(design), number=Inf,
                          p.value=pval, adjust="BH")
-  res <- decideTests(fit, p.value=pval)
+  res <- decideTests(fit, p.value=pval, adjust="BH") ## had to meet adjusted pval
+  res <- res %>% as.data.frame()
   
-  sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
+  if (ncol(res) > 2) {
+    sig_tests <- res[abs(res[,2:ncol(res)]) %>% rowSums(.) > 0,]
+  } else {
+    sig_tests <- res[abs(res[,2]) > 0,]
+  }
+
+  sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
+  # sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
   
   control_cond <- input$control
   
   ## only looking at significantly altered gene sets.
-  if (ncol(sigdrugs %>% as.data.frame()) >= 2){
-    sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
-      rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
-  } else {
-    sigpathways <- as.data.frame(sigdrugs %>% abs())   
-    sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
-  }
+ # if (ncol(sigdrugs %>% as.data.frame()) >= 2){
+ #   sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
+ #     rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
+ # } else {
+ #   sigpathways <- as.data.frame(sigdrugs %>% abs())   
+ #   sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
+ # }
   
   
-  sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% sigpathways$Pathway,]
+ # sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% sigpathways$Pathway,]
   
   gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
     melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'new_samples')
-  print(gsvaplot_data %>% head())
-
   
+  
+## this is new  
+#  sig_tests <- sig_tests %>% rownames_to_column(., var = "Pathway") %>%  
+#    reshape2::melt(. ,id="Pathway", variable.name= "Conditions", value.name = "significance")
+#  gsvaplot_data <- gsvaplot_data %>% merge(., sig_tests, by=c("Pathway", "Conditions")
+## new until here
+                                           
+                                             
   ## chosing if we want to plot kegg by p-value or by clustering!
   if (input$kegg_ord == 'clust'){
     kegg_order <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
@@ -443,7 +509,7 @@ output$heatmapPlot <- renderPlotly({
     need(input$genplotheat, "Please push button to start analysis and generate or update heatmap.")
   )
   
-  ggplotly(values$plotheat, height = 750, width=700})
+  ggplotly(values$plotheat, height = 750, width=700)})
 
 output$pcaPlot <- renderPlotly({
   validate(

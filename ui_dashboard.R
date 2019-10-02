@@ -6,7 +6,11 @@ fluidPage(
                         width =  4,
                         solidHeader = TRUE,
                         collapsible = FALSE,
-                        fileInput("file1", "Choose peptide.txt MaxQuant output",
+                        radioButtons("file_fmt", "File format:",
+                                     c("peptide.txt" = "pep",
+                                       "CSV" = "csv")),
+                        tags$hr(),
+                        fileInput("file1", "Choose peptide intensity file",
                                   accept = c(
                                     "text/csv",
                                     "text/comma-separated-values,text/plain",
@@ -15,6 +19,7 @@ fluidPage(
                         
                         #horizontal line
                         tags$hr(),
+                       
                         textInput("control", "Input control condition", placeholder = "Enter control/reference condition name"),
                         textInput("othercond", "Input condition 1", placeholder = "Enter test condition name"),
                         #conditionalPanel(

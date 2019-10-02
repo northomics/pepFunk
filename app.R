@@ -16,7 +16,6 @@ library(dendextend)
 library(LaCroixColoR) #devtools::install_github("johannesbjork/LaCroixColoR")
 library(shinycssloaders)
 
-
 # install.packages.auto(rhandsontable)
 # devtools::install_github("johannesbjork/LaCroixColoR")
 # install.packages.auto(DESeq2)
