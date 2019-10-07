@@ -157,7 +157,7 @@ output$treatment_gsva <- renderUI({
   x <- values$data
   conditions <- x$Condition
   if (input$restrict_analysis == "y"){
-    selectInput("treatmeant_gsva_select", "Treatment condition",
+    selectInput("treatment_gsva_select", "Treatment condition",
                 choices=conditions)
   }
 })
@@ -230,17 +230,53 @@ get_plotdata <- reactive({
     new_samples <- new_conditions$Samples
     conditions <- new_conditions$Condition
 }
-  cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
-  #print(cond)
-  design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
-  colnames(design)[1] <- c(control_cond) 
-  colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
-                                             nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
-  fit <- lmFit(gsva_kegg, design)
-  fit <- eBayes(fit, trend=T)
+#  cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
+#  #print(cond)
+#  design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
+#  colnames(design)[1] <- c(control_cond) 
+#  colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
+#                                             nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
+#  fit <- lmFit(gsva_kegg, design)
+#  fit <- eBayes(fit, trend=T)
+#  
+#  colnames(exp_data) <- new_samples
+#  new_conditions <- data.frame(new_samples, conditions)
+#  list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, conditions = conditions,
+#       new_conditions = new_conditions)
+  if (input$restrict_analysis == "y"){ # make design matrix for restricted analysis (pairwise comparisons)
+    control <- input$control_gsva_select
+    
+    treatment <- input$treatment_gsva_select
+    
+    new_conditions <- data.frame(new_samples, conditions)
+   
+    new_conditions <- new_conditions[new_conditions$conditions %in% c(control, treatment),]
+    
+    cond <- factor(new_conditions$conditions) %>% relevel(control)
+   
+    design <- model.matrix(~ cond)
+    colnames(design)[1] <- c(control) 
+    colnames(design)[2] <- substr(colnames(design)[2], 5, 
+                                               nchar(colnames(design)[2])) #just removing "cond"
+    
+    fit <- lmFit(gsva_kegg[,new_conditions$new_samples], design)
+    fit<- eBayes(fit, trend=T)
+    
+    #colnames(exp_data) <- new_conditions$new_samples
+    ## need to
+  } else { #plot and analyse ALL the data (no restrictions)
+    cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
+    design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
+    colnames(design)[1] <- c(control_cond) 
+    colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
+                                               nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
+    fit <- lmFit(gsva_kegg, design)
+    fit <- eBayes(fit, trend=T)
+    
+    colnames(exp_data) <- new_samples
+    new_conditions <- data.frame(new_samples, conditions)
+  }
   
-  colnames(exp_data) <- new_samples
-  new_conditions <- data.frame(new_samples, conditions)
   list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, conditions = conditions,
        new_conditions = new_conditions)
 })
@@ -323,9 +359,15 @@ observeEvent(input$genplotheat,{
   
   sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
   
-  control_cond <- input$control
+  
   
   ## only looking at significantly altered gene sets.
+  if (input$restrict_analysis == "y"){
+   control_cond <- input$control_gsva_select 
+  } else {
+    control_cond <- input$control
+  }
+  
   if (ncol(sigdrugs %>% as.data.frame()) >= 2){
     sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
       rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
@@ -339,7 +381,6 @@ observeEvent(input$genplotheat,{
   
   gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
     melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'new_samples')
-  print(gsvaplot_data %>% head())
 
   
   ## chosing if we want to plot kegg by p-value or by clustering!
