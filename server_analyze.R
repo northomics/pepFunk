@@ -198,11 +198,15 @@ get_plotdata <- reactive({
   gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                     kcdf='Gaussian') ## rnaseq=F because we have continuous data
   
-  
+  if (exists("ignore_cols")){
   new_samples <- new_conditions$Samples[-ignore_cols]
   print(new_samples)
   conditions <- new_conditions$Condition[-ignore_cols]
   print(conditions)
+  } else {
+    new_samples <- new_conditions$Samples
+    conditions <- new_conditions$Condition
+}
   cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
   #print(cond)
   design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
@@ -443,7 +447,7 @@ output$heatmapPlot <- renderPlotly({
     need(input$genplotheat, "Please push button to start analysis and generate or update heatmap.")
   )
   
-  ggplotly(values$plotheat, height = 750, width=700})
+  ggplotly(values$plotheat, height = 750, width=700)})
 
 output$pcaPlot <- renderPlotly({
   validate(
