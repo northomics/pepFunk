@@ -58,13 +58,13 @@ get_data <- reactive({
     need(inFile != "", "Please upload a dataset.")
   )
   if (input$file_fmt == "pep"){
-  exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
-    as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
-  exp_data[exp_data==1] <-NA
+    exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+      as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
+    exp_data[exp_data==1] <-NA
   } else {
-  exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
-    as.data.frame()
-  exp_data[exp_data==1] <-NA
+    exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+      as.data.frame()
+    exp_data[exp_data==1] <-NA
   }
   exp_data
 })
@@ -139,7 +139,23 @@ style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da
 })
 
 
+output$control_gsva <- renderUI({
+  x <- values$data
+  conditions <- x$Condition
+  if (input$restrict_analysis == "y"){
+    selectInput("control_gsva_select", "Control condition",
+               choices=conditions)
+    }
+})
 
+output$treatment_gsva <- renderUI({
+  x <- values$data
+  conditions <- x$Condition
+  if (input$restrict_analysis == "y"){
+    selectInput("treatment_gsva_select", "Treatment condition",
+                choices=conditions)
+  }
+})
 
 get_plotdata <- reactive({
   if (is.null(get_data())) {
@@ -202,23 +218,45 @@ get_plotdata <- reactive({
                     kcdf='Gaussian') ## rnaseq=F because we have continuous data
   
   if (exists("ignore_cols")){
-    new_samples <- new_conditions$Samples[-ignore_cols]
-    conditions <- new_conditions$Condition[-ignore_cols]
+  new_samples <- new_conditions$Samples[-ignore_cols]
+  print(new_samples)
+  conditions <- new_conditions$Condition[-ignore_cols]
+  print(conditions)
   } else {
     new_samples <- new_conditions$Samples
     conditions <- new_conditions$Condition
-  }
-  
-
+}
+#  cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
+#  #print(cond)
+#  design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
+#  colnames(design)[1] <- c(control_cond) 
+#  colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
+#                                             nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
+#  fit <- lmFit(gsva_kegg, design)
+#  fit <- eBayes(fit, trend=T)
 #  
+#  colnames(exp_data) <- new_samples
+#  new_conditions <- data.frame(new_samples, conditions)
+#  list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, conditions = conditions,
+#       new_conditions = new_conditions)
   if (input$restrict_analysis == "y"){ # make design matrix for restricted analysis (pairwise comparisons)
     control <- input$control_gsva_select
+    
     treatment <- input$treatment_gsva_select
+    
     new_conditions <- data.frame(new_samples, conditions)
+   
     new_conditions <- new_conditions[new_conditions$conditions %in% c(control, treatment),]
+    
     cond <- factor(new_conditions$conditions) %>% relevel(control)
+   
     design <- model.matrix(~ cond)
-    fit <- lmFit(gsva_kegg[,new_conditions$new_samples], design1)
+    colnames(design)[1] <- c(control) 
+    colnames(design)[2] <- substr(colnames(design)[2], 5, 
+                                               nchar(colnames(design)[2])) #just removing "cond"
+    
+    fit <- lmFit(gsva_kegg[,new_conditions$new_samples], design)
+
     fit<- eBayes(fit, trend=T)
     
     #colnames(exp_data) <- new_conditions$new_samples
@@ -228,13 +266,14 @@ get_plotdata <- reactive({
     design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
     colnames(design)[1] <- c(control_cond) 
     colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
-                                             nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
+                                               nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
     fit <- lmFit(gsva_kegg, design)
     fit <- eBayes(fit, trend=T)
-  
+    
     colnames(exp_data) <- new_samples
     new_conditions <- data.frame(new_samples, conditions)
-    }
+  }
+
   
   list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, conditions = conditions,
        new_conditions = new_conditions)
@@ -356,24 +395,29 @@ observeEvent(input$genplotheat,{
   sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
   # sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
   
-  control_cond <- input$control
+  
   
   ## only looking at significantly altered gene sets.
- # if (ncol(sigdrugs %>% as.data.frame()) >= 2){
- #   sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
- #     rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
- # } else {
- #   sigpathways <- as.data.frame(sigdrugs %>% abs())   
- #   sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
- # }
+  if (input$restrict_analysis == "y"){
+   control_cond <- input$control_gsva_select 
+  } else {
+    control_cond <- input$control
+  }
+  
+  if (ncol(sigdrugs %>% as.data.frame()) >= 2){
+    sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
+      rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
+  } else {
+    sigpathways <- as.data.frame(sigdrugs %>% abs())   
+    sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
+  }
+
   
   
  # sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% sigpathways$Pathway,]
   
   gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
     melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'new_samples')
-  
-  
 ## this is new  
 #  sig_tests <- sig_tests %>% rownames_to_column(., var = "Pathway") %>%  
 #    reshape2::melt(. ,id="Pathway", variable.name= "Conditions", value.name = "significance")
