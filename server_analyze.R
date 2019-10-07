@@ -74,10 +74,15 @@ get_data <- reactive({
   validate(
     need(inFile != "", "Please upload a dataset.")
   )
-  exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
-    as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
-  exp_data[exp_data==1] <-NA
-
+  if (input$file_fmt == "pep"){
+    exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+      as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
+    exp_data[exp_data==1] <-NA
+  } else {
+    exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+      as.data.frame()
+    exp_data[exp_data==1] <-NA
+  }
   exp_data
 })
 
@@ -137,6 +142,24 @@ output$gotoanalysisbutton <- renderUI({
 icon = icon("arrow-right"),
 label = "Continue to peptide centric analysis!",
 style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4")
+})
+
+output$control_gsva <- renderUI({
+  x <- values$data
+  conditions <- x$Condition
+  if (input$restrict_analysis == "y"){
+    selectInput("control_gsva_select", "Control condition",
+               choices=conditions)
+    }
+})
+
+output$treatment_gsva <- renderUI({
+  x <- values$data
+  conditions <- x$Condition
+  if (input$restrict_analysis == "y"){
+    selectInput("treatmeant_gsva_select", "Treatment condition",
+                choices=conditions)
+  }
 })
 
 get_plotdata <- reactive({

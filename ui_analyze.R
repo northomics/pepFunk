@@ -66,6 +66,13 @@ tabBox(
   tabPanel("Functional enrichment heatmap",
            sidebarLayout(
              sidebarPanel(width = 3,
+                          radioButtons("restrict_analysis", "Restrict analisys to compare two conditions?",
+                                       c("Yes" = "y", 
+                                         "No" = "n"),
+                                       selected = "n"),
+                          uiOutput("control_gsva"),
+                          uiOutput("treatment_gsva"),
+                          tags$hr(),
                           colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
                           colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
                           radioButtons("sample_ord", "Order Samples:",
