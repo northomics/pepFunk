@@ -57,6 +57,14 @@ get_data <- reactive({
   validate(
     need(inFile != "", "Please upload a dataset.")
   )
+  if (input$sample_data == "sample"){
+    inFile <- list(datapath = "peptides.txt") 
+  }
+  
+#    exp_data <- read.delim("", row.names = 1) %>% 
+#      as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
+#    exp_data[exp_data==1] <-NA
+#  }
   if (input$file_fmt == "pep"){
     exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
       as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
@@ -201,8 +209,13 @@ get_plotdata <- reactive({
   norm_pep <- estimateSizeFactorsForMatrix(core_kegg) 
   exp_data <- sweep(as.matrix(core_kegg), 2, norm_pep, "/")
   peptides <- rownames(exp_data)
+  if (input$normalize == "log10"){
   exp_data <- data.frame(exp_data) %>% #dplyr::select(starts_with('Intensity')) %>%
-    mutate_all(., funs(log10(1 + .))) # %>% ##should be log10 data...
+    mutate_all(., funs(log10(1 + .)))
+  } else{
+    exp_data <- data.frame(exp_data) %>% #dplyr::select(starts_with('Intensity')) %>%
+      mutate_all(., funs(log2(1 + .)))
+  }# %>% ##should be log10 data...
   rownames(exp_data) <- peptides
   
   

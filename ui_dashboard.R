@@ -6,6 +6,11 @@ fluidPage(
                         width =  4,
                         solidHeader = TRUE,
                         collapsible = FALSE,
+                        radioButtons("sample_data", "Use sample data or upload your own?",
+                                     c("Upload data" = "upload",
+                                       "Use sample data" = "sample"),
+                                     selected = "upload"),
+                        tags$hr(),
                         radioButtons("file_fmt", "File format:",
                                      c("peptide.txt" = "pep",
                                        "CSV" = "csv")),
@@ -19,7 +24,6 @@ fluidPage(
                         
                         #horizontal line
                         tags$hr(),
-                       
                         textInput("control", "Input control condition", placeholder = "Enter control/reference condition name"),
                         textInput("othercond", "Input condition 1", placeholder = "Enter test condition name"),
                         #conditionalPanel(
@@ -35,8 +39,11 @@ fluidPage(
                         tags$hr(),
                         radioButtons("format", "Manual or auto condition formatting?",
                                      c("Manual" = "manual",
-                                       "Auto" = "auto"), selected="manual") # ,
-                        #tags$hr(),
+                                       "Auto" = "auto"), selected="manual")  ,
+                        tags$hr(),
+                        radioButtons("normalize", "Transform intensity values using:",
+                                     c("Log10" = "log10",
+                                       "Log2" = "log2"))
                         #actionButton("runButton","Set condition information")
                  ),
                  box(title = "Editing sample names and conditions",
