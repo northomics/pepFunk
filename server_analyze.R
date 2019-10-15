@@ -15,7 +15,7 @@ observeEvent(input$addcond, {
     ui = tags$div( #wrapping in a div with id for ease of removal
       id = paste0('line', values$btn),
       textInput(paste0("otherConditions", values$btn + 1),
-                label = paste("Input Condition", values$btn + 1), value = ""
+                label = paste("Input condition", values$btn + 1), value = ""
       )
     )
   )
@@ -223,11 +223,6 @@ get_plotdata <- reactive({
   # applying function over our pathway list
   kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg', core_pep_kegg = core_pep_kegg) 
   
-  
-  ## need to be able to change this
-  control_cond <- input$control
-  ## make into a function
-  
   gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                     kcdf='Gaussian') ## rnaseq=F because we have continuous data
   
@@ -253,44 +248,12 @@ get_plotdata <- reactive({
 #  new_conditions <- data.frame(new_samples, conditions)
 #  list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, conditions = conditions,
 #       new_conditions = new_conditions)
-  if (input$restrict_analysis == "y" ){ # make design matrix for restricted analysis (pairwise comparisons)
-    control <- input$control_gsva_select
-    
-    treatment <- input$treatment_gsva_select
-    
-    new_conditions <- data.frame(new_samples, conditions)
-   
-    new_conditions <- new_conditions[new_conditions$conditions %in% c(control, treatment),]
-    
-    cond <- factor(new_conditions$conditions) %>% relevel(control)
-   
-    design <- model.matrix(~ cond)
-    colnames(design)[1] <- c(control) 
-    colnames(design)[2] <- substr(colnames(design)[2], 5, 
-                                               nchar(colnames(design)[2])) #just removing "cond"
-    
-    fit <- lmFit(gsva_kegg[,new_conditions$new_samples], design)
-
-    fit<- eBayes(fit, trend=T)
-    
-    #colnames(exp_data) <- new_conditions$new_samples
-    ## need to
-  } else { #plot and analyse ALL the data (no restrictions)
-    cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
-    design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
-    colnames(design)[1] <- c(control_cond) 
-    colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
-                                               nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
-    fit <- lmFit(gsva_kegg, design)
-    fit <- eBayes(fit, trend=T)
-    
-    colnames(exp_data) <- new_samples
-    new_conditions <- data.frame(new_samples, conditions)
-  }
-
+ 
   
-  list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, conditions = conditions,
-       new_conditions = new_conditions)
+  #list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, conditions = conditions,
+  #     new_conditions = new_conditions)
+  list(exp_data = exp_data, gsva_kegg = gsva_kegg, conditions = conditions,
+            new_conditions = new_conditions)
 })
 
 
@@ -384,14 +347,54 @@ pca_plotdata <- reactive({
 
 ## heatmapPlot now is its own separate thing, want to be able to push a button for this...
 observeEvent(input$genplotheat,{
-  fit <- get_plotdata()[['fit']]
-  design <- get_plotdata()[['design']]
+  #fit <- get_plotdata()[['fit']]
+  #design <- get_plotdata()[['design']]
   gsva_kegg <- get_plotdata()[['gsva_kegg']]
   new_conditions <- get_plotdata()[['new_conditions']]
+  #new_conditions <- values$data # this is a dataframe with Samples, Conditions
+  new_samples <- new_conditions$Samples
+  if (input$restrict_analysis == "y" ){ # make design matrix for restricted analysis (pairwise comparisons)
+    control <- input$control_gsva_select
+    
+    treatment <- input$treatment_gsva_select
+    
+    
+    new_conditions <- data.frame(new_samples, new_conditions)
+    
+    new_conditions <- new_conditions[new_conditions$Condition %in% c(control, treatment),]
+    
+    cond <- factor(new_conditions$Condition) %>% relevel(control)
+    design <- model.matrix(~ cond)
+    colnames(design)[1] <- c(control) 
+    colnames(design)[2] <- substr(colnames(design)[2], 5, 
+                                  nchar(colnames(design)[2])) #just removing "cond"
+    
+    fit <- lmFit(gsva_kegg[,new_conditions$new_samples], design)
+    
+    fit<- eBayes(fit, trend=T)
+    
+    #colnames(exp_data) <- new_conditions$new_samples
+    ## need to
+  } else { #plot and analyse ALL the data (no restrictions)
+    control_cond <- input$control
+    cond <- factor(new_conditions$Condition) %>% relevel(control_cond) # DMSO is the control
+    design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
+    colnames(design)[1] <- c(control_cond) 
+    colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
+                                               nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
+    fit <- lmFit(gsva_kegg, design)
+    fit <- eBayes(fit, trend=T)
+    
+    #colnames(exp_data) <- new_samples
+    new_conditions <- data.frame(new_samples, new_conditions)
+  }
+  
+  
   allGeneSets <- topTable(fit, coef=2:ncol(design), number=Inf)
   ## only plot "significant" pvalues
   if (input$plotsig == 'y') {
     pval <- as.numeric(input$pvalthresh)
+    print(pval)
   } else {
     pval <- 1.1 ## change this eventually
   }
@@ -405,7 +408,7 @@ observeEvent(input$genplotheat,{
   } else {
     sig_tests <- res[abs(res[,2]) > 0,]
   }
- print(sig_tests)
+
   sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
   # sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
   
@@ -464,7 +467,7 @@ observeEvent(input$genplotheat,{
     
   } else {
     values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
-      facet_grid(~ conditions, switch='x', scales = "free") +
+      facet_grid(~ Condition, switch='x', scales = "free") +
       #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
       scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
                            space = "Lab", name="GSVA enrichment score") + 
@@ -567,7 +570,7 @@ output$heatmapPlot <- renderPlotly({
     need(input$genplotheat, "Please push button to start analysis and generate or update heatmap.")
   )
   
-  ggplotly(values$plotheat, height = 750, width=700)})
+  ggplotly(values$plotheat, height = 750, width=1000)})
 
 output$pcaPlot <- renderPlotly({
   validate(
