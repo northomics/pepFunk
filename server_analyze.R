@@ -53,13 +53,13 @@ additional_conds <- reactive({
 })
 
 get_data <- reactive({
-  inFile <- input$file1
+  if (input$sample_data == "sample"){
+    inFile <- list(datapath = "peptides.txt")
+    } else {
+  inFile <- input$file1 }
   validate(
     need(inFile != "", "Please upload a dataset.")
   )
-  if (input$sample_data == "sample"){
-    inFile <- list(datapath = "peptides.txt") 
-  }
   
 #    exp_data <- read.delim("", row.names = 1) %>% 
 #      as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
@@ -150,6 +150,7 @@ style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da
 output$control_gsva <- renderUI({
   x <- values$data
   conditions <- x$Condition
+  print(conditions)
   if (input$restrict_analysis == "y"){
     selectInput("control_gsva_select", "Control condition",
                choices=conditions)
@@ -252,7 +253,7 @@ get_plotdata <- reactive({
 #  new_conditions <- data.frame(new_samples, conditions)
 #  list(exp_data = exp_data, fit = fit, design = design, gsva_kegg = gsva_kegg, conditions = conditions,
 #       new_conditions = new_conditions)
-  if (input$restrict_analysis == "y"){ # make design matrix for restricted analysis (pairwise comparisons)
+  if (input$restrict_analysis == "y" ){ # make design matrix for restricted analysis (pairwise comparisons)
     control <- input$control_gsva_select
     
     treatment <- input$treatment_gsva_select
@@ -404,7 +405,7 @@ observeEvent(input$genplotheat,{
   } else {
     sig_tests <- res[abs(res[,2]) > 0,]
   }
-
+ print(sig_tests)
   sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
   # sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
   
@@ -417,11 +418,11 @@ observeEvent(input$genplotheat,{
     control_cond <- input$control
   }
   
-  if (ncol(sigdrugs %>% as.data.frame()) >= 2){
-    sigpathways <- sigdrugs[abs(sigdrugs) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
+  if (ncol(sig_tests %>% as.data.frame()) >= 2){
+    sigpathways <- sig_tests[abs(sig_tests) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
       rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
   } else {
-    sigpathways <- as.data.frame(sigdrugs %>% abs())   
+    sigpathways <- as.data.frame(sig_tests %>% abs())   
     sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
   }
 
