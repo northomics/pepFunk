@@ -394,9 +394,8 @@ observeEvent(input$genplotheat,{
   ## only plot "significant" pvalues
   if (input$plotsig == 'y') {
     pval <- as.numeric(input$pvalthresh)
-    print(pval)
   } else {
-    pval <- 1.1 ## change this eventually
+    pval <- 5 ## change this eventually
   }
   DEgeneSets <- topTable(fit, coef=2:ncol(design), number=Inf,
                          p.value=pval, adjust="BH")
@@ -410,7 +409,6 @@ observeEvent(input$genplotheat,{
   }
 
   sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
-  # sigdrugs <- res[,abs(res) %>% colSums(.) > 0]
   
   
   
