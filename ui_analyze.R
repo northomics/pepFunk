@@ -53,7 +53,7 @@ tabBox(
   tabPanel("Functional enrichment heatmap",
            sidebarLayout(
              sidebarPanel(width = 3,
-                          radioButtons("restrict_analysis", "Restrict analisys to compare two conditions?",
+                          radioButtons("restrict_analysis", "Restrict analysis to compare two conditions?",
                                        c("Yes" = "y", 
                                          "No" = "n"),
                                        selected = "n"),

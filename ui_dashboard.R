@@ -6,20 +6,25 @@ fluidPage(
                         width =  4,
                         solidHeader = TRUE,
                         collapsible = FALSE,
-                        radioButtons("sample_data", "Use sample data or upload your own?",
+                        radioButtons("sample_data", "Try with sample data or upload your own?",
                                      c("Upload data" = "upload",
                                        "Use sample data" = "sample"),
                                      selected = "upload"),
-                        tags$hr(),
-                        radioButtons("file_fmt", "File format:",
+                        
+                       # only show if user wants to upload their own data 
+                        conditionalPanel(
+                          condition = "input.sample_data == 'upload'",
+                             tags$hr(), 
+                            radioButtons("file_fmt", "File format:",
                                      c("peptide.txt" = "pep",
-                                       "CSV" = "csv")),
-                        tags$hr(),
-                        fileInput("file1", "Choose peptide intensity file",
+                                       "CSV with peptide sequences and intensities" = "csv")),
+                          tags$hr(),
+                         fileInput("file1", "Choose peptide intensity file",
                                   accept = c(
                                     "text/csv",
                                     "text/comma-separated-values,text/plain",
                                     ".csv")
+                          )
                         ),
                         
                         #horizontal line

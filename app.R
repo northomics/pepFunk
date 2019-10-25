@@ -27,7 +27,7 @@ library(shinycssloaders)
 # # BiocManager::install("DESeq2")
 # # BiocManager::install("GSVA")
 
-# The proteinGroup files are large, increnase the limit of file upload size to 500MB
+# The proteinGroup files are large, increase the limit of file upload size to 500MB
 options(shiny.maxRequestSize=500*1024^2)
 
 source("peptide_centric_functions.R")
