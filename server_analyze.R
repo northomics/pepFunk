@@ -174,7 +174,10 @@ get_plotdata <- reactive({
   #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
   
   exp_data <- get_data()  
+  ## filter peptide expression here to deal with missing data
   
+  
+   
   ## allow users to ignore samples
   new_conditions <- values$data
   
@@ -207,6 +210,30 @@ get_plotdata <- reactive({
     dplyr::select(starts_with('Intensity'))
   
   colnames(core_kegg) <-  removeintensity
+  
+  if (exists("ignore_cols")){
+    new_samples <- new_conditions$Samples[-ignore_cols]
+    print(new_samples)
+    conditions <- new_conditions$Condition[-ignore_cols]
+    print(conditions)
+  } else {
+    new_samples <- new_conditions$Samples
+    conditions <- new_conditions$Condition
+  }
+  
+  
+  cond_opts <- conditions %>% unique()
+  print(cond_opts)
+  cond_count <- table(conditions) %>% as.vector()
+  print(cond_count)
+  print(core_kegg %>% head())
+  core_kegg <- filter_valids(core_kegg, #we now have 51,395 (from 101,995)
+                           #conditions = c('1', '2', '3', '4', '5', '6'),
+                           #min_count = c(22, 23, 23, 22, 24, 24), #want peptide to have been identified in at least half of the samples 
+                           conditions = cond_opts,
+                           min_count = cond_count,
+                           at_least_one = TRUE)  #but if it is consistently identified in a condition, keep it
+  print(core_kegg %>% head())
   norm_pep <- estimateSizeFactorsForMatrix(core_kegg) 
   exp_data <- sweep(as.matrix(core_kegg), 2, norm_pep, "/")
   peptides <- rownames(exp_data)
@@ -226,15 +253,7 @@ get_plotdata <- reactive({
   gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                     kcdf='Gaussian') ## rnaseq=F because we have continuous data
   
-  if (exists("ignore_cols")){
-  new_samples <- new_conditions$Samples[-ignore_cols]
-  print(new_samples)
-  conditions <- new_conditions$Condition[-ignore_cols]
-  print(conditions)
-  } else {
-    new_samples <- new_conditions$Samples
-    conditions <- new_conditions$Condition
-}
+  
 #  cond <- factor(conditions) %>% relevel(control_cond) # DMSO is the control
 #  #print(cond)
 #  design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
