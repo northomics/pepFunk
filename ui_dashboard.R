@@ -44,7 +44,7 @@ fluidPage(
                         tags$hr(),
                         radioButtons("format", "Manual or auto condition formatting?",
                                      c("Manual" = "manual",
-                                       "Auto" = "auto"), selected="manual")  ,
+                                       "Auto" = "auto"), selected="auto")  ,
                         tags$hr(),
                         radioButtons("normalize", "Transform intensity values using:",
                                      c("Log10" = "log10",

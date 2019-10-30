@@ -10,9 +10,11 @@ tabBox(
                                       choices = c('1' = '1'),
                                       selected = "1"),
                           actionButton('genplotpca', 'Generate plot and update colours'),
-                          downloadButton('dlPCA', 'Download PCA biplot'),
+                          tags$hr(),
                           
-                          uiOutput("colourpickers")
+                          uiOutput("colourpickers"),
+                          tags$hr(),
+                          downloadButton('dlPCA', 'Download PCA biplot')
              ),
              mainPanel(
              plotlyOutput("pcaPlot") %>% withSpinner()
