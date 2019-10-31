@@ -24,20 +24,17 @@ fluidPage(
                                     "text/csv",
                                     "text/comma-separated-values,text/plain",
                                     ".csv")
-                          )
-                        ),
+                          
+                        )),
                         
                         #horizontal line
                         tags$hr(),
-                        textInput("control", "Input control condition", placeholder = "Enter control/reference condition name"),
+                        
+                       conditionalPanel(
+                         condition = "input.sample_data == 'upload'",
+                       textInput("control", "Input control condition", placeholder = "Enter control/reference condition name"),
                         textInput("othercond", "Input condition 1", placeholder = "Enter test condition name"),
-                        #conditionalPanel(
-                        #  condition = "input.moreconditions == 'yes'",
-                        #  textInput("othercond2", "Input other condition", "Enter other test condition name")),
-                        #radioButtons("moreconditions", "Do you have more conditions?",
-                        #             c("Yes" = "yes",
-                        #               "No" = "no"), selected="no"),
-                        #allow additional conditions, get this working after...
+            
                         tags$div(id = 'placeholder'),
                         actionButton("addcond", "Add additional condition"), 
                         actionButton("rmvcond", "Remove added condition"), # these are ugly
@@ -50,7 +47,16 @@ fluidPage(
                                      c("Log10" = "log10",
                                        "Log2" = "log2"))
                         #actionButton("runButton","Set condition information")
-                 ),
+                ),
+                 conditionalPanel(
+                   condition = "input.sample_data == 'sample'",
+                   textInput("control_sample", "Input control condition", value = "DMSO"),
+                   textInput("othercond_sample", "Input condition 1", value = "Low"),
+                   textInput("finalcond_sample", "Input condition 2", value = "High")
+                 
+                 )),
+                 
+                 
                  box(title = "Editing sample names and conditions",
                      status = "primary", 
                      width =  8,

@@ -9,7 +9,7 @@ tabBox(
                           selectInput("x_axisPC", label = "PC on x-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
                                       choices = c('1' = '1'),
                                       selected = "1"),
-                          actionButton('genplotpca', 'Generate plot and update colours'),
+                          actionButton('genplotpca', 'Generate plot or update plot'),
                           tags$hr(),
                           
                           uiOutput("colourpickers"),
@@ -47,7 +47,10 @@ tabBox(
                           downloadButton('dlDendro', 'Download cluster dendrogram')
                           ),
              
-             mainPanel(plotlyOutput("clustDendro"))
+             mainPanel(
+              # plotlyOutput("clustDendro")
+               plotOutput("clustDendro")
+               )
            )
            
   ),      
