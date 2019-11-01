@@ -129,7 +129,7 @@ output$gotoanalysisbutton <- renderUI({
   actionButton("gotoanalysis", 
 icon = icon("arrow-right"),
 label = "Continue to peptide centric analysis!",
-style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4")
+style="float:right; color: #fff;  background-color: #006E90; border-color: #006E90")
 })
 
 
@@ -437,7 +437,7 @@ observeEvent(input$genplotheat,{
   
   gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = kegg_order)
  # gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
-  print(gsvaplot_data %>% head())
+  
   if (input$sample_ord == 'clust'){
     sample_order <- rownames(sig_gsva %>% t())[hclust(dist(sig_gsva %>% t()))$order]
     gsvaplot_data$variable<- factor(gsvaplot_data$variable, levels = sample_order)
@@ -447,7 +447,7 @@ observeEvent(input$genplotheat,{
       scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
                            space = "Lab", name="GSVA enrichment score") + 
       geom_tile(na.rm = TRUE) +
-      xlab(label = "Sample") +
+      xlab(label = "\n\n Sample") +
       ylab(label="") +
       theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
     
@@ -458,7 +458,7 @@ observeEvent(input$genplotheat,{
       scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
                            space = "Lab", name="GSVA enrichment score") + 
       geom_tile(na.rm = TRUE) +
-      xlab(label = "Sample") +
+      xlab(label = "\n\n Sample") +
       ylab(label="") +
       theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
   }
@@ -525,7 +525,6 @@ observeEvent(input$genclustdendro, {
   } else {
     condition_options <- c(input$control, input$othercond)
   }
- print(condition_options)
   ## colours are stored under input$colours1 : input$coloursn where n is values$btn + 2
   plotcolours <- paste0("input$colour2_", 1:(values$btn+2)) 
   ## to change the character vector into object names
@@ -539,23 +538,32 @@ observeEvent(input$genclustdendro, {
   new_samples <- new_conditions$Samples
   condcolours <- data.frame(Condition = condition_options, Colour = plotcolours)
   condcolours <- merge(new_conditions, condcolours, by = "Condition")
+ # dend <- log_exp %>% t() %>% dist(method = dist_method) %>% 
+ #   hclust(method = hclust_method) %>% as.dendrogram() %>%
+ #   set("leaves_pch", 19) %>% 
+ #   set("leaves_col", as.character(condcolours$Colour), order_value = T)
   dend <- log_exp %>% t() %>% dist(method = dist_method) %>% 
-    hclust(method = hclust_method) %>% as.dendrogram() %>%
+    hclust(method = hclust_method) %>% as.dendrogram(hang=0.1) %>%
     set("leaves_pch", 19) %>% 
-    set("leaves_col", as.character(condcolours$Colour), order_value = T)
+    set("leaves_col", as.character(condcolours$Colour), order_value = T) %>%
+    set('branches_lwd', 0.6) %>%
+    set('labels_cex', 1)
+  #values$dendro <- ggplot(dend, theme = theme_dendro(), offset_labels = -20)+theme(legend.position="none") + coord_flip()  
+  
   dend <- as.ggdend(dend, horiz=T)  
-  par(mar=c(50, 10, 10, 10))
-  values$dendro <- ggplot(dend) # +  theme(plot.margin = margin(-10, 2, 2, 2, "cm"))
+  #par(mar=c(50, 10, 10, 10))
+  values$dendro <- ggplot(dend,theme = theme_dendro(), offset_labels = -20) + coord_flip() +
+    theme(legend.position="none") #, plot.margin = margin(0, 0, 5, 0, "cm")) #c(top, right, bottom, left)
 }) 
 
 ## plotting 
-output$clustDendro <- renderPlot({
+output$clustDendro <- renderPlotly({
   validate(
     need(input$genclustdendro, "Please push button to cluster samples and plot or update dendrogram.")
   )
-  #  ggplotly(values$dendro)
-  par(mar=c(50, 10, 10, 10))
-  return(values$dendro)  
+   ggplotly(values$dendro)
+  #par(mar=c(50, 10, 10, 10))
+  #return(values$dendro)  
   })
 
 output$heatmapPlot <- renderPlotly({
@@ -570,8 +578,8 @@ output$pcaPlot <- renderPlotly({
   validate(
     need(input$genplotpca, "Please push button to start analysis and generate or update PCA biplot.")
   )
-  ggplotly(values$plotpca) %>% layout(margin = list(l = 75, b = 65)) %>%  hide_legend()
-  #values$plotpca
+  
+  ggplotly(values$plotpca) 
   })
 
 ## organizing plot download handlers

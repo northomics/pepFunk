@@ -9,12 +9,14 @@ tabBox(
                           selectInput("x_axisPC", label = "PC on x-axis", ## this should be updated as we figure out how many PCs there are...should be in server, look up how to do this
                                       choices = c('1' = '1'),
                                       selected = "1"),
-                          actionButton('genplotpca', 'Generate plot or update plot'),
+                          actionButton('genplotpca', 'Generate plot or update plot', icon("chart-bar"),
+                                       style="color: #fff; background-color: #006E90; border-color: #006E90"), #337ab7
                           tags$hr(),
                           
                           uiOutput("colourpickers"),
                           tags$hr(),
-                          downloadButton('dlPCA', 'Download PCA biplot')
+                          downloadButton('dlPCA', 'Download PCA biplot',
+                                         style="color: #fff; background-color: #006E90; border-color: #006E90")
              ),
              mainPanel(
              plotlyOutput("pcaPlot") %>% withSpinner()
@@ -42,14 +44,17 @@ tabBox(
                                                   'Median' = 'medi',
                                                   'Centroid' = 'centr'),
                                       selected = 'ward.D2'),
-                          actionButton('genclustdendro', 'Generate cluster dendrogram'),
+                          actionButton('genclustdendro', 'Generate cluster dendrogram',
+                                       icon("chart-bar"),
+                                       style="color: #fff; background-color: #006E90; border-color: #006E90"),
                           tags$hr(),
-                          downloadButton('dlDendro', 'Download cluster dendrogram')
+                          downloadButton('dlDendro', 'Download cluster dendrogram',
+                                         style="color: #fff; background-color: #006E90; border-color: #006E90")
                           ),
              
              mainPanel(
-              # plotlyOutput("clustDendro")
-               plotOutput("clustDendro")
+              plotlyOutput("clustDendro")
+             #plotOutput("clustDendro", height = 900, width = 800)
                )
            )
            
@@ -80,10 +85,16 @@ tabBox(
                           conditionalPanel(
                             condition = "input.plotsig == 'y'",
                             textInput("pvalthresh", "Adjusted p-value threshold for plotting", "0.05")),
-                          actionButton('genplotheat', 'Generate/update heatmap'),
-                          downloadButton('downloadPlot','Download heatmap'),
+                          actionButton('genplotheat', 'Generate/update heatmap',
+                                       icon("chart-bar"),
+                                       style="color: #fff; background-color: #006E90; border-color: #006E90"),
+                          
                           tags$hr(),
-                          downloadButton('downloadKEGG', 'Download peptide annotation')
+                          downloadButton('downloadPlot','Download heatmap',
+                                         style="color: #fff; background-color: #006E90; border-color: #006E90"),
+                          tags$hr(),
+                          downloadButton('downloadKEGG', 'Download peptide annotation',
+                                         style="color: #fff; background-color: #006E90; border-color: #006E90")
              ),
              mainPanel(
                plotlyOutput("heatmapPlot")
