@@ -60,7 +60,7 @@ core_pep_kegg$newpep_name <- make.names(core_pep_kegg$pep,unique=T) # update pep
 #  _header ------------------------------------------------------
 
 
-header <- dashboardHeader(title = span(img(src="logo_imetalab.png", width = 140), "Peptide-Centric Analyst"),
+header <- dashboardHeader(title = span(img(src="logo_imetalab.png", width = 140), "pepFunk"),
                           titleWidth = 460,
                           tags$li(class = "dropdown",
                                   tags$a(tags$img(height = "18px", alt="SNAP Logo", src="logo_M.png")
@@ -128,17 +128,17 @@ body <- dashboardBody(
     tabItem(tabName = "about",
             fluidRow(
               box(
-                title = "About protein-centric metaproteomic workflows...", 
+                title = "About pepFunk, a metaproteomic peptide-centric functional enrichment workflow.", 
                 solidHeader = TRUE,
                 status = "primary", 
                 width = 12,
-                "Welcome to the Peptide-Centric Analyst!",
+                "Welcome to pepFunk!",
                 br(),
-                "Peptide-Centric Analyst alls you to complete a peptide-focused functional enrichment workflow for gut microbiome metaproteomic studies.
+                "pepFunk allows you to complete a peptide-focused functional enrichment workflow for gut microbiome metaproteomic studies.
                 
-                This workflow uses KEGG annotation for pathway enrichment, along with an adapted Gene Set Variation Analysis (GSVA).
-                
+                This workflow uses KEGG annotation for pathway enrichment, alongside Gene Set Variation Analysis (GSVA) adapted for peptide data.
                 By completing analysis on peptides, rather than proteins, we lose less information and retain more statistical power.
+                We curated peptide database specific to human gut microbiome studies for computational speed.
               "
               )
             )   
