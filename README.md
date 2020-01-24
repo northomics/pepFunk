@@ -18,7 +18,7 @@ The source code is also made available for researchers to customize the workflow
 
 Suggestions are always welcome and can be directed to Caitlin Simopoulos at csimopou@uottawa.ca.
 
-Push requests are very much encouraged.
+Pull requests are very much encouraged :)
 
 ## Required R packages:
 - `rhandsontable`
