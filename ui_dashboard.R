@@ -6,26 +6,48 @@ fluidPage(
                         width =  4,
                         solidHeader = TRUE,
                         collapsible = FALSE,
-                        radioButtons("sample_data", "Try with sample data or upload your own?",
-                                     c("Upload data" = "upload",
-                                       "Use sample data" = "sample"),
+                        radioButtons("databaseChoice", "Choose your peptidet-to-KEGG database to use in the analysis:",
+                                     c("Curated human microbiome" = "curated",
+                                       "Upload your own database" = "uploaded"),
+                                     selected = "curated"),
+                       
+                        
+                        
+                        conditionalPanel(
+                                         condition = "input.databaseChoice == 'uploaded'", 
+                                         tags$hr(),
+                                         fileInput("databasefile", "Choose your database file:",
+                                                   accept = c("text/csv",
+                                                              "text/comma-separated-values,text/plain",
+                                                              ".csv")),
+                       helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence 
+                                the second column is the KO term, and the third column is the number of times that peptide was 
+                                annotated with the KO term.")
+                        ),
+                        
+                        # horizontal line
+                        tags$hr(),
+                        
+                        radioButtons("sample_data", "Input data type:",
+                                     c("Upload your own data" = "upload",
+                                       "Use our sample data" = "sample"),
                                      selected = "upload"),
                         
-                       # only show if user wants to upload their own data 
+                        # only show if user wants to upload their own data
                         conditionalPanel(
                           condition = "input.sample_data == 'upload'",
-                             tags$hr(), 
-                            radioButtons("file_fmt", "File format:",
-                                     c("peptide.txt" = "pep",
-                                       "CSV with peptide sequences and intensities" = "csv")),
                           tags$hr(),
-                         fileInput("file1", "Choose peptide intensity file",
-                                  accept = c(
-                                    "text/csv",
-                                    "text/comma-separated-values,text/plain",
-                                    ".csv")
-                          
-                        )),
+                          radioButtons("file_fmt", "File format:",
+                                       c("peptide.txt" = "pep",
+                                         "CSV with peptide sequences and intensities" = "csv")),
+                          tags$hr(),
+                          fileInput("file1", "Choose the peptide intensity file to be analyzed",
+                                    accept = c(
+                                      "text/csv",
+                                      "text/comma-separated-values,text/plain",
+                                      ".csv")
+                                    
+                          )),
                         
                         #horizontal line
                         tags$hr(),

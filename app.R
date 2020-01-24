@@ -47,15 +47,7 @@ pathways <- kegg_L3$L4_desc %>% unique()
 pathways <- pathways[-c(208:229)] #removing KO that are not in brite/pathway
 pathway_kegg <- dlply(kegg_L3 %>% dplyr::select(L4_desc, L3), .(L4_desc))
 
-## Core kegg database
-core_pep_kegg <- read.delim("./www/core_pep_kegg.csv", 
-                            sep=",", header=F, col.names = c("pep", "kegg", "count", "eval"))
-core_pep_kegg_only <- core_pep_kegg %>% dplyr::group_by(pep) %>% dplyr::select(pep, kegg)
-core_pep_kegg <- core_pep_kegg %>% dplyr::group_by(pep) %>%
-  dplyr::summarize(total = sum(count))  %>%
-  merge(., core_pep_kegg, by='pep', all.y=T) %>%
-  dplyr::mutate(prop = count/total) %>% dplyr::select(pep, kegg, prop)
-core_pep_kegg$newpep_name <- make.names(core_pep_kegg$pep,unique=T) # update pep names so all unique
+## peptide to KEGG database now loaded depending on user's choice in server_analyze.R
 
 #  _header ------------------------------------------------------
 

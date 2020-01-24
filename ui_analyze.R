@@ -70,6 +70,9 @@ tabBox(
                           uiOutput("control_gsva"),
                           uiOutput("treatment_gsva"),
                           tags$hr(),
+                          radioButtons("fig_type", "Heatmap type:",
+                                       c('Classic heatmap' = 'heatmap',
+                                         'Bubble heatmap' = 'bubble')),
                           colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
                           colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
                           radioButtons("sample_ord", "Order Samples:",
@@ -81,7 +84,7 @@ tabBox(
                           radioButtons('plotsig', "Only plot significantly enriched KEGG?",
                                        c('Yes' = 'y',
                                          'No' = 'n'),
-                                       selected = 'n'),
+                                       selected = 'y'),
                           conditionalPanel(
                             condition = "input.plotsig == 'y'",
                             textInput("pvalthresh", "Adjusted p-value threshold for plotting", "0.05")),

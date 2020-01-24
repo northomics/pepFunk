@@ -3,6 +3,35 @@
 #https://www.reddit.com/r/rstats/comments/7n4qnj/shiny_observeevent_on_inserted_ui/
 
 
+## if users want to use their own database
+core_pep_kegg <- reactive({
+  if (input$databaseChoice == 'curated'){
+    ## Core kegg database
+    core_pep_kegg <- read.delim("./www/core_pep_kegg_db.csv", 
+                                sep=",", header=F, col.names = c("pep", "kegg", "count"))
+    core_pep_kegg_only <- core_pep_kegg %>% dplyr::group_by(pep) %>% dplyr::select(pep, kegg)
+    core_pep_kegg <- core_pep_kegg %>% dplyr::group_by(pep) %>%
+      dplyr::summarize(total = sum(count))  %>%
+      merge(., core_pep_kegg, by='pep', all.y=T) %>%
+      dplyr::mutate(prop = count/total) %>% dplyr::select(pep, kegg, prop)
+    core_pep_kegg$newpep_name <- make.names(core_pep_kegg$pep,unique=T) # update pep names so all unique
+  } else {
+    inFile <- input$databasefile
+  validate(
+    need(inFile != "", "Please upload a properly formatted peptide to KEGG database.")
+  )
+  core_pep_kegg <- read.delim(inFile$datapath, 
+                              sep=",", header=F, col.names = c("pep", "kegg", "count"))
+  core_pep_kegg <- core_pep_kegg %>% dplyr::group_by(pep) %>%
+    dplyr::summarize(total = sum(count))  %>%
+    merge(., core_pep_kegg, by='pep', all.y=T) %>%
+    dplyr::mutate(prop = count/total) %>% dplyr::select(pep, kegg, prop)
+  core_pep_kegg$newpep_name <- make.names(core_pep_kegg$pep,unique=T) # update pep names so all unique
+  }
+  return(core_pep_kegg)
+})
+## need to change in code below
+## core_pep_kegg is now core_pep_kegg()
 
 values <- reactiveValues(btn = 0) # want to start the button count at 0 not 1... 
 
@@ -157,7 +186,7 @@ get_plotdata <- reactive({
   }
   ## use this for help  
   #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
-  
+  core_pep_kegg <- core_pep_kegg()
   exp_data <- get_data()  
   ## allow users to ignore samples
   new_conditions <- values$data
@@ -329,38 +358,25 @@ pca_plotdata <- reactive({
 
 
 
-## heatmapPlot now is its own separate thing, want to be able to push a button for this...
+## heatmapPlot now is its own separate thing
 observeEvent(input$genplotheat,{
-  #fit <- get_plotdata()[['fit']]
-  #design <- get_plotdata()[['design']]
   gsva_kegg <- get_plotdata()[['gsva_kegg']]
   new_conditions <- get_plotdata()[['new_conditions']]
-  
-  #new_conditions <- values$data # this is a dataframe with Samples, Conditions
   new_samples <- new_conditions$Samples
   
   if (input$restrict_analysis == "y" ){ # make design matrix for restricted analysis (pairwise comparisons)
     control <- input$control_gsva_select
-    
     treatment <- input$treatment_gsva_select
-    
-    
     new_conditions <- data.frame(new_samples, new_conditions)
-    
     new_conditions <- new_conditions[new_conditions$Condition %in% c(control, treatment),]
-    
     cond <- factor(new_conditions$Condition) %>% relevel(control)
     design <- model.matrix(~ cond)
     colnames(design)[1] <- c(control) 
     colnames(design)[2] <- substr(colnames(design)[2], 5, 
                                   nchar(colnames(design)[2])) #just removing "cond"
-    
     fit <- lmFit(gsva_kegg[,new_conditions$new_samples], design)
-    
     fit<- eBayes(fit, trend=T)
-    
-    #colnames(exp_data) <- new_conditions$new_samples
-    ## need to
+
   } else { #plot and analyse ALL the data (no restrictions)
     control_cond <- input$control_sample
     cond <- factor(new_conditions$Condition) %>% relevel(control_cond) # DMSO is the control
@@ -370,19 +386,14 @@ observeEvent(input$genplotheat,{
                                                nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
     fit <- lmFit(gsva_kegg, design)
     fit <- eBayes(fit, trend=T)
-    
-    #colnames(exp_data) <- new_samples
- 
-   # new_conditions <- data.frame(new_samples, new_conditions)
+
   }
   
-  
   allGeneSets <- topTable(fit, coef=2:ncol(design), number=Inf)
-  ## only plot "significant" pvalues
   if (input$plotsig == 'y') {
     pval <- as.numeric(input$pvalthresh)
   } else {
-    pval <- 5 ## change this eventually
+    pval <- Inf # infinity limit for pvalues...no restrictions
   }
   DEgeneSets <- topTable(fit, coef=2:ncol(design), number=Inf,
                          p.value=pval, adjust="BH")
@@ -606,5 +617,6 @@ output$downloadKEGG <- downloadHandler(
     paste0('peptide_annotation', '.txt')
   },
   content = function(file){
+    core_pep_kegg <- core_pep_kegg()
     write.table(core_pep_kegg_only, file, row.names = F, quote = F)}
 )
