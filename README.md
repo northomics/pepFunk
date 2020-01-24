@@ -4,6 +4,7 @@
 
 This is the source code for the [pepFunk R shiny app](https://shiny.imetalab.ca/pepFunk). 
 
+Please see the [preprint](https://www.biorxiv.org/content/10.1101/854976v1) for information on the methodology used.
 
 ## How to run the app
 
@@ -11,6 +12,13 @@ The easiest way to run the app is by using [RStudio](https://rstudio.com).
 After installing the required R packages, open `app.R` in RStudio and select "Run app" at the top right corner of the RStudio window.
 The app will open in a window that will allow you to run the Shiny app locally. 
 
+The source code is also made available for researchers to customize the workflow to their needs. However, the app itself includes many analysis and plotting customization options including the ability:
+- for a user to upload their own peptide-KEGG database
+- to abjust plotting options to meet a user's needs.
+
+Suggestions are always welcome and can be directed to Caitlin Simopoulos at csimopou@uottawa.ca.
+
+Push requests are very much encouraged.
 
 ## Required R packages:
 - `rhandsontable`
