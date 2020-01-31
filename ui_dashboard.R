@@ -1,12 +1,13 @@
 library(shiny)
 fluidPage(
+  use_waiter(), # this doesn't show anything, just let's you easily show loading screens
           fluidRow(
                     box(title = "Peptide data input",
                         status = "primary", 
                         width =  4,
                         solidHeader = TRUE,
                         collapsible = FALSE,
-                        radioButtons("databaseChoice", "Choose your peptidet-to-KEGG database to use in the analysis:",
+                        radioButtons("databaseChoice", "Peptide-to-KEGG database:",
                                      c("Curated human microbiome" = "curated",
                                        "Upload your own database" = "uploaded"),
                                      selected = "curated"),

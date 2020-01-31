@@ -53,7 +53,7 @@ tabBox(
                           ),
              
              mainPanel(
-              plotlyOutput("clustDendro")
+              plotOutput("clustDendro") 
              #plotOutput("clustDendro", height = 900, width = 800)
                )
            )
@@ -72,9 +72,12 @@ tabBox(
                           tags$hr(),
                           radioButtons("fig_type", "Heatmap type:",
                                        c('Classic heatmap' = 'heatmap',
-                                         'Bubble heatmap' = 'bubble')),
+                                         'Bubble heatmap' = 'bubble'),
+                                       selected = 'heatmap'),
                           colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
                           colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
+                          
+                          tags$hr(),
                           radioButtons("sample_ord", "Order Samples:",
                                        c('By clustering' = 'clust',
                                          'By conditions/facets' = 'facets')),
@@ -87,7 +90,9 @@ tabBox(
                                        selected = 'y'),
                           conditionalPanel(
                             condition = "input.plotsig == 'y'",
-                            textInput("pvalthresh", "Adjusted p-value threshold for plotting", "0.05")),
+                            textInput("pvalthresh", "Adjusted p-value threshold for plotting", "0.05"))
+#                          )
+,
                           actionButton('genplotheat', 'Generate/update heatmap',
                                        icon("chart-bar"),
                                        style="color: #fff; background-color: #006E90; border-color: #006E90"),
@@ -100,8 +105,24 @@ tabBox(
                                          style="color: #fff; background-color: #006E90; border-color: #006E90")
              ),
              mainPanel(
-               plotlyOutput("heatmapPlot")
+               #plotOutput("heatmapPlot")
+               fluidRow(
+                 box(width=12,
+                 uiOutput("heatmapUI")
+                 )
+                 ),
+               fluidRow(
+                 box(width=6,
+               #textInput("plotheight", "Plot height (pixels)", "1000")),
+               sliderInput("plotheight", "Plot height (pixels):",
+                           min = 100, max = 1000, value = 500)
+               ),
+               box(width=6,
+                   sliderInput("plotwidth", "Plot width (pixels):",
+                               min = 100, max = 1000, value = 700)
+               #textInput("plotwidth", "Plot width (pixels)", "1000"))
+               ),
              )
            )
   )
-)
+))

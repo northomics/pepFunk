@@ -2,6 +2,21 @@
 ## allow additional conditions, for adding and removing...
 #https://www.reddit.com/r/rstats/comments/7n4qnj/shiny_observeevent_on_inserted_ui/
 
+## loading screen
+w <- Waiter$new(
+  id = "plot",
+  html = spin_flowers(), 
+  color = alpha(.5)
+)
+
+plotwidth <- reactive({
+  plotwidth <- paste0(input$plotwidth)
+return(plotwidth)
+})
+plotheight <- reactive({
+  plotheight <- paste0(input$plotheight)
+  return(plotheight)
+})
 
 ## if users want to use their own database
 core_pep_kegg <- reactive({
@@ -184,6 +199,7 @@ get_plotdata <- reactive({
   if (is.null(get_data())) {
     return()
   }
+
   ## use this for help  
   #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
   core_pep_kegg <- core_pep_kegg()
@@ -357,7 +373,6 @@ pca_plotdata <- reactive({
 })
 
 
-
 ## heatmapPlot now is its own separate thing
 observeEvent(input$genplotheat,{
   gsva_kegg <- get_plotdata()[['gsva_kegg']]
@@ -406,74 +421,119 @@ observeEvent(input$genplotheat,{
     sig_tests <- res[abs(res[,2]) > 0,]
   }
 
-  sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
-  
-  #works to here
- 
-  ## only looking at significantly altered gene sets.
-  if (input$restrict_analysis == "y"){
-   control_cond <- input$control_gsva_select 
-  } else {
-    control_cond <- input$control_sample
-  }
-  
-  if (ncol(sig_tests %>% as.data.frame()) >= 2){
-    sigpathways <- sig_tests[abs(sig_tests) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
-      rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
-  } else {
-    sigpathways <- as.data.frame(sig_tests %>% abs())   
-    sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
-  }
 
+  ## Controlling the type of heatmap. 
+  ## Bubble plot options
+  ## input$fig_type == "bubble"
+  ## input$fig_type == "heatmap"
   
-  
-  gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
-    melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'Samples')
-  
-  
-  
-## this is new  
-#  sig_tests <- sig_tests %>% rownames_to_column(., var = "Pathway") %>%  
-#    reshape2::melt(. ,id="Pathway", variable.name= "Conditions", value.name = "significance")
-#  gsvaplot_data <- gsvaplot_data %>% merge(., sig_tests, by=c("Pathway", "Conditions")
-## new until here
-                                           
-                                             
-  ## chosing if we want to plot kegg by p-value or by clustering!
-  if (input$kegg_ord == 'clust'){
-    kegg_order <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
-  } else {
-    kegg_order <- allGeneSets[order(-allGeneSets$P.Value),] %>% rownames()
-  }
-  
-  gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = kegg_order)
- # gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
-  
-  if (input$sample_ord == 'clust'){
-    sample_order <- rownames(sig_gsva %>% t())[hclust(dist(sig_gsva %>% t()))$order]
-    gsvaplot_data$variable<- factor(gsvaplot_data$variable, levels = sample_order)
-    values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
-      #facet_grid(~ Condition, switch='x', scales = "free") +
-      #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
-      scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
-                           space = "Lab", name="GSVA enrichment score") + 
-      geom_tile(na.rm = TRUE) +
-      xlab(label = "\n\n Sample") +
-      ylab(label="") +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
+ 
+    sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
+    ## only looking at significantly altered gene sets.
+    if (input$restrict_analysis == "y"){
+      control_cond <- input$control_gsva_select 
+    } else {
+      control_cond <- input$control_sample
+    }
     
+    if (ncol(sig_tests %>% as.data.frame()) >= 2){
+      sigpathways <- sig_tests[abs(sig_tests) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
+        rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
+    } else {
+      sigpathways <- as.data.frame(sig_tests %>% abs())   
+      sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
+    }
+    
+    
+    if (input$fig_type == "heatmap"){    
+    gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
+      melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'Samples')
+    
+    
+    
+    
+    ## chosing if we want to plot kegg by p-value or by clustering!
+    if (input$kegg_ord == 'clust'){
+      kegg_order <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
+    } else {
+      kegg_order <- allGeneSets[order(-allGeneSets$P.Value),] %>% rownames()
+    }
+    
+    gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = kegg_order)
+    # gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
+    
+    if (input$sample_ord == 'clust'){
+      sample_order <- rownames(sig_gsva %>% t())[hclust(dist(sig_gsva %>% t()))$order]
+      gsvaplot_data$variable<- factor(gsvaplot_data$variable, levels = sample_order)
+      values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
+        #facet_grid(~ Condition, switch='x', scales = "free") +
+        #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
+        scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
+                             space = "Lab", name="GSVA enrichment score") + 
+        geom_tile(na.rm = TRUE) +
+        xlab(label = "\n\n Sample") +
+        ylab(label="") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
+      
+    } else {
+      values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
+        facet_grid(~ Condition, switch='x', scales = "free") +
+        #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
+        scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
+                             space = "Lab", name="GSVA enrichment score") + 
+        geom_tile(na.rm = TRUE) +
+        xlab(label = "\n\n Sample") +
+        ylab(label="") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
+   
+    }
+  } else if (input$fig_type == "bubble"){
+## bubble heatmap prints, but is not right somewhere...colours change depending on plot type. could be an issue with plotly and fill
+  wantedRows <- data.frame(Pathway = rownames(DEgeneSets), pvals = DEgeneSets$adj.P.Val)
+  
+  #gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
+  #    melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'Samples')  
+  sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
+  sig_gsva_plotting <- merge(sig_gsva, wantedRows, by.x=0, by.y="Pathway")
+  
+  
+  gsvaplot_data <- data.frame(sig_gsva_plotting) %>% dplyr::rename(Pathway = Row.names) %>%
+    melt(., id=c('Pathway', 'pvals')) %>% merge(., new_conditions, by.x='variable', by.y = 'Samples')
+ 
+  #gsvaplot_data$condition <- substr(gsvaplot_data$variable, 1, nchar(as.character(gsvaplot_data$variable))-1)
+  if (input$kegg_ord == 'clust') {
+    clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
+    gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
   } else {
-    values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
-      facet_grid(~ Condition, switch='x', scales = "free") +
-      #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
-      scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
-                           space = "Lab", name="GSVA enrichment score") + 
-      geom_tile(na.rm = TRUE) +
-      xlab(label = "\n\n Sample") +
+    pvalorder <- allGeneSets[order(-allGeneSets$P.Value),] %>% rownames()
+    gsvaplot_data$Pathway <- factor(gsvaplot_data$Pathway, levels = pvalorder)
+    }
+  if (input$sample_ord == 'clust'){
+  values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill=value)) +
+      #facet_grid(~ Condition, switch = "x", scales = "free_x", space = "free_x") +
+    scale_fill_gradientn(colours=c(input$low_col, input$low_col, "white", input$high_col, input$high_col),
+                         space = "Lab", name="GSVA enrichment score") + 
+      geom_point(na.rm = TRUE, shape=21, colour="darkgrey",  aes(size = abs(value))) +
+      xlab(label = "Sample") +
       ylab(label="") +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) #+
+      #scale_size("P-value", trans="log10", range=c(11, 2), breaks=waiver()
+                # ) 
+  } else {
+    values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill=value)) +
+      facet_grid(~ Condition, switch = "x", scales = "free_x", space = "free_x") +
+      scale_fill_gradientn(colours=c(input$low_col, input$low_col, "white", input$high_col, input$high_col),
+                             space = "Lab", name="GSVA enrichment score") + 
+      geom_point(na.rm = TRUE, shape=21,colour="darkgrey",  aes(size = abs(value))) +
+      xlab(label = "Sample") +
+      ylab(label="") +
+      theme_bw() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))# +
+    #scale_size("P-value", trans="log10", range=c(11, 2), breaks=waiver())    
   }
-}) 
+  }
+    }) 
 
 
 observeEvent(input$genplotpca, {
@@ -577,13 +637,18 @@ output$clustDendro <- renderPlotly({
   #return(values$dendro)  
   })
 
-output$heatmapPlot <- renderPlotly({
+
+output$heatmapUI <- renderUI({
+  output$heatmapPlot <- renderPlot({
+    validate(
+      need(input$genplotheat, "Please push button to start analysis and generate/update heatmap.")
+    )
   
-  validate(
-    need(input$genplotheat, "Please push button to start analysis and generate or update heatmap.")
-  )
-  
-  ggplotly(values$plotheat, height = 750, width=1000)})
+    values$plotheat})
+   plotOutput("heatmapPlot", height = input$plotheight, width=input$plotwidth)
+})
+
+
 
 output$pcaPlot <- renderPlotly({
   validate(
