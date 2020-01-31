@@ -13,12 +13,12 @@ After installing the required R packages, open `app.R` in RStudio and select "Ru
 The app will open in a window that will allow you to run the Shiny app locally. 
 
 The source code is also made available for researchers to customize the workflow to their needs. However, the app itself includes many analysis and plotting customization options including the ability:
-- for a user to upload their own peptide-KEGG database
+- for a user to upload their own peptide-KEGG database that would allow analysis of any metaproteomic data.
 - to abjust plotting options to meet a user's needs.
 
 Suggestions are always welcome and can be directed to Caitlin Simopoulos at csimopou@uottawa.ca.
 
-Push requests are very much encouraged.
+Pull requests are very much encouraged :)
 
 ## Required R packages:
 - `rhandsontable`
