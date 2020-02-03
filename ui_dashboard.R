@@ -1,6 +1,5 @@
 library(shiny)
 fluidPage(
-  use_waiter(), # this doesn't show anything, just let's you easily show loading screens
           fluidRow(
                     box(title = "Peptide data input",
                         status = "primary", 
