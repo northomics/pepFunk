@@ -3,11 +3,7 @@
 #https://www.reddit.com/r/rstats/comments/7n4qnj/shiny_observeevent_on_inserted_ui/
 
 ## loading screen
-w <- Waiter$new(
-  id = "plot",
-  html = spin_flowers(), 
-  color = alpha(.5)
-)
+
 
 plotwidth <- reactive({
   plotwidth <- paste0(input$plotwidth)

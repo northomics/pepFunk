@@ -15,7 +15,7 @@ library(plotly)
 library(dendextend)
 library(LaCroixColoR) #devtools::install_github("johannesbjork/LaCroixColoR")
 library(shinycssloaders)
-library(waiter)
+
 
 # install.packages.auto(rhandsontable)
 # devtools::install_github("johannesbjork/LaCroixColoR")
