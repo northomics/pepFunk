@@ -53,7 +53,7 @@ tabBox(
                           ),
              
              mainPanel(
-              plotOutput("clustDendro") 
+              plotlyOutput("clustDendro") 
              #plotOutput("clustDendro", height = 900, width = 800)
                )
            )
@@ -112,7 +112,7 @@ tabBox(
                
                fluidRow(
                  tabBox(
-                   title = tagList(shiny::icon("gear"), "Plot dimension settings"), width = 12,
+                   title = tagList(shiny::icon("gear"), "Plot dimension settings"), width = 8,
                    tabPanel("In app visualization", 
                             sliderInput("plotheight", "Plot height (pixels):",
                              min = 100, max = 1000, value = 500),

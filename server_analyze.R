@@ -521,9 +521,8 @@ observeEvent(input$genplotheat,{
       xlab(label = "Sample") +
       ylab(label="") +
       theme_bw() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1)) #+
-      #scale_size("P-value", trans="log10", range=c(11, 2), breaks=waiver()
-                # ) 
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
   } else {
     values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill=value)) +
       facet_grid(~ Condition, switch = "x", scales = "free_x", space = "free_x") +
@@ -533,8 +532,10 @@ observeEvent(input$genplotheat,{
       xlab(label = "Sample") +
       ylab(label="") +
       theme_bw() +
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))# +
-    #scale_size("P-value", trans="log10", range=c(11, 2), breaks=waiver())    
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      guides(size=guide_legend(title="Absolute GSVA enrichment score")# +
+    
+    ) 
   }
   }
   
@@ -615,22 +616,15 @@ observeEvent(input$genclustdendro, {
   new_samples <- new_conditions$Samples
   condcolours <- data.frame(Condition = condition_options, Colour = plotcolours)
   condcolours <- merge(new_conditions, condcolours, by = "Condition")
- # dend <- log_exp %>% t() %>% dist(method = dist_method) %>% 
- #   hclust(method = hclust_method) %>% as.dendrogram() %>%
- #   set("leaves_pch", 19) %>% 
- #   set("leaves_col", as.character(condcolours$Colour), order_value = T)
   dend <- log_exp %>% t() %>% dist(method = dist_method) %>% 
     hclust(method = hclust_method) %>% as.dendrogram(hang=0.1) %>%
     set("leaves_pch", 19) %>% 
     set("leaves_col", as.character(condcolours$Colour), order_value = T) %>%
     set('branches_lwd', 0.6) %>%
     set('labels_cex', 1)
-  #values$dendro <- ggplot(dend, theme = theme_dendro(), offset_labels = -20)+theme(legend.position="none") + coord_flip()  
-  
   dend <- as.ggdend(dend, horiz=T)  
-  #par(mar=c(50, 10, 10, 10))
   values$dendro <- ggplot(dend,theme = theme_dendro(), offset_labels = -20) + coord_flip() +
-    theme(legend.position="none") #, plot.margin = margin(0, 0, 5, 0, "cm")) #c(top, right, bottom, left)
+    theme(legend.position="none")
 }) 
 
 ## plotting 
@@ -639,8 +633,6 @@ output$clustDendro <- renderPlotly({
     need(input$genclustdendro, "Please push button to cluster samples and plot or update dendrogram.")
   )
    ggplotly(values$dendro)
-  #par(mar=c(50, 10, 10, 10))
-  #return(values$dendro)  
   })
 
 
