@@ -76,7 +76,11 @@ tabBox(
                                        selected = 'heatmap'),
                           colourInput("high_col", "Colour for high GSVA score", "FF6F59"),
                           colourInput("low_col", "Colour for low GSVA score", "#67A7C1"),
-                          
+                          tags$hr(),
+                          helpText("Please press 'Generate/update heatmap' when you are ready to plot the data. If you would like to update the plot with any additional options or colours, please press the button again."),
+                          actionButton('genplotheat', 'Generate/update heatmap',
+                                       icon("chart-bar"),
+                                       style="color: #fff; background-color: #006E90; border-color: #006E90"),
                           tags$hr(),
                           radioButtons("sample_ord", "Order Samples:",
                                        c('By clustering' = 'clust',
@@ -93,9 +97,7 @@ tabBox(
                             textInput("pvalthresh", "Adjusted p-value threshold for plotting", "0.05"))
 #                          )
 ,
-                          actionButton('genplotheat', 'Generate/update heatmap',
-                                       icon("chart-bar"),
-                                       style="color: #fff; background-color: #006E90; border-color: #006E90"),
+
                           
                           tags$hr(),
                           downloadButton('downloadPlot','Download heatmap',
@@ -106,23 +108,32 @@ tabBox(
              ),
              mainPanel(
                #plotOutput("heatmapPlot")
+              
+               
+               fluidRow(
+                 tabBox(
+                   title = tagList(shiny::icon("gear"), "Plot dimension settings"), width = 12,
+                   tabPanel("In app visualization", 
+                            sliderInput("plotheight", "Plot height (pixels):",
+                             min = 100, max = 1000, value = 500),
+                            sliderInput("plotwidth", "Plot width (pixels):",
+                            min = 100, max = 1000, value = 700)
+                    ),
+                   tabPanel("To PDF",
+                            sliderInput("plotheightsave", "Plot height (inches):",
+                                         min = 1, max = 20, value = 8),
+                            sliderInput("plotwidthsave", "Plot width (inches):",
+                                      min = 1, max = 20, value = 11)
+                            )
+                 )
+                 
+               ),
                fluidRow(
                  box(width=12,
-                 uiOutput("heatmapUI")
+                     uiOutput("heatmapUI")
                  )
-                 ),
-               fluidRow(
-                 box(width=6,
-               #textInput("plotheight", "Plot height (pixels)", "1000")),
-               sliderInput("plotheight", "Plot height (pixels):",
-                           min = 100, max = 1000, value = 500)
                ),
-               box(width=6,
-                   sliderInput("plotwidth", "Plot width (pixels):",
-                               min = 100, max = 1000, value = 700)
-               #textInput("plotwidth", "Plot width (pixels)", "1000"))
-               ),
-             )
+
            )
   )
 ))

@@ -196,6 +196,8 @@ output$treatment_gsva <- renderUI({
 })
 
 get_plotdata <- reactive({
+  
+  withProgress(message = 'Completing GSVA and data transformation', value = 0, { #want a progress bar
   if (is.null(get_data())) {
     return()
   }
@@ -267,7 +269,7 @@ get_plotdata <- reactive({
   gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                     kcdf='Gaussian') ## rnaseq=F because we have continuous data
   
-
+}) # <- end of withProgress
   list(exp_data = exp_data, gsva_kegg = gsva_kegg, conditions = conditions,
             new_conditions = new_conditions)
 })
@@ -378,6 +380,8 @@ observeEvent(input$genplotheat,{
   gsva_kegg <- get_plotdata()[['gsva_kegg']]
   new_conditions <- get_plotdata()[['new_conditions']]
   new_samples <- new_conditions$Samples
+  
+  withProgress(message = 'Making plot', value = 0, { #want a progress bar
   
   if (input$restrict_analysis == "y" ){ # make design matrix for restricted analysis (pairwise comparisons)
     control <- input$control_gsva_select
@@ -533,6 +537,8 @@ observeEvent(input$genplotheat,{
     #scale_size("P-value", trans="log10", range=c(11, 2), breaks=waiver())    
   }
   }
+  
+      }) ## <- this is end of withProgress
     }) 
 
 
@@ -661,10 +667,10 @@ output$pcaPlot <- renderPlotly({
 ## organizing plot download handlers
 output$downloadPlot <- downloadHandler(
   filename = function(){
-    paste('heatmapPlot','.png',sep='')
+    paste('heatmapPlot','.pdf',sep='')
   }, 
   content = function(file){
-    ggsave(file,plot=values$plotheat)
+    ggsave(file,plot=values$plotheat, height=input$plotheightsave, width=input$plotwidthsave, units="in")
   }
 )
 
