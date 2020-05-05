@@ -97,7 +97,7 @@ get_data <- reactive({
     } else {
   inFile <- input$file1 }
   validate(
-    need(inFile != "", "Please upload a dataset.")
+    need(inFile != "", "Please upload a file of peptide intensity values.")
   )
   
 
@@ -187,24 +187,6 @@ label = "Continue to peptide centric analysis!",
 style="float:right; color: #fff;  background-color: #006E90; border-color: #006E90")
 })
 
-
-#output$control_gsva <- renderUI({
-#  x <- values$data
-#  conditions <- x$Condition
-#  if (input$restrict_analysis == "y"){
-#    selectInput("control_gsva_select", "Control condition",
-#               choices=conditions)
-#    }
-#})
-#
-#output$treatment_gsva <- renderUI({
-#  x <- values$data
-#  conditions <- x$Condition
-#  if (input$restrict_analysis == "y"){
-#    selectInput("treatment_gsva_select", "Treatment condition",
-#                choices=conditions)
-#  }
-#})
 
 get_plotdata <- reactive({
   

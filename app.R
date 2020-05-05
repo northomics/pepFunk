@@ -57,6 +57,9 @@ header <- dashboardHeader(title = span(img(src="logo_imetalab.png", width = 140)
                           titleWidth = 460,
                           tags$li(class = "dropdown",
                                   tags$a(tags$img(height = "18px", alt="SNAP Logo", src="logo_M.png")
+                                  ),
+                            tags$head(
+                                    tags$link(rel = "stylesheet", type = "text/css", href = "./www/custom.css")
                                   )
                           )
 )
@@ -75,7 +78,9 @@ sidebar <- dashboardSidebar(
     menuItem("Gallery", tabName = "gallery", icon = icon("picture-o")),
     menuItem("About", tabName = "about", icon = icon("question-circle")),
     menuItem("iMetaLab", icon = icon("home"), 
-             href = "http://www.imetalab.ca")
+             href = "http://www.imetalab.ca"),
+    menuItem("pepFunk on GitHub", icon=icon("github"), 
+             href = "https://github.com/northomics/pepFunk")
     
   )
 )
@@ -84,6 +89,9 @@ sidebar <- dashboardSidebar(
 # _body --------------------------------------------------------------
 
 body <- dashboardBody(
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+  ),
   tabItems(
     #  ___dashboard/starting  tab  ------------------------------------------------------
     tabItem(tabName = "dashboard",
@@ -137,11 +145,6 @@ body <- dashboardBody(
             )   
     )
   ),
-
-  #   CSS section ignored for analysis------------------------------------------------------ 
-  tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
-  ),
   #Semi-collapsible sidebar
   tags$script(HTML("$('body').addClass('sidebar-mini');"))             
 )
@@ -150,10 +153,10 @@ body <- dashboardBody(
 
 # ------ UI ---------------------------
 ui <- dashboardPage(
-  title = "Peptide-Centric Analyst",
+  title = "pepFunk",
   header,
   sidebar,
-  body
+  body,
 )
 
 
