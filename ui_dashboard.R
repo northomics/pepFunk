@@ -40,6 +40,15 @@ fluidPage(
                           radioButtons("file_fmt", "File format:",
                                        c("peptide.txt" = "pep",
                                          "CSV with peptide sequences and intensities" = "csv")),
+                          conditionalPanel(
+                            condition = "input.file_fmt == 'csv'",
+                            helpText("File format: A comma separated file (.csv) where the first column is the peptide sequence, and following columns are intensity values.
+                                     Headers should be used. It is helpful to have the conditions of your samples in the header.")
+                          ),
+                          conditionalPanel(
+                            condition = "input.file_fmt == 'pep'",
+                            helpText("File format: The peptide.txt output file from MaxQuant or MetaLab.")
+                          ),
                           tags$hr(),
                           fileInput("file1", "Choose the peptide intensity file to be analyzed",
                                     accept = c(
@@ -67,7 +76,8 @@ fluidPage(
                         tags$hr(),
                         radioButtons("normalize", "Transform intensity values using:",
                                      c("Log10" = "log10",
-                                       "Log2" = "log2"))
+                                       "Log2" = "log2"), 
+                                      selected = "log2")
                         #actionButton("runButton","Set condition information")
                 ),
                  conditionalPanel(

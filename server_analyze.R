@@ -18,7 +18,7 @@ plotheight <- reactive({
 core_pep_kegg <- reactive({
   if (input$databaseChoice == 'curated'){
     ## Core kegg database
-    core_pep_kegg <- read.delim("./www/core_pep_kegg_db.csv", 
+    core_pep_kegg <- read.delim("./data/core_pep_kegg_db.csv", 
                                 sep=",", header=F, col.names = c("pep", "kegg", "count"))
     core_pep_kegg_only <- core_pep_kegg %>% dplyr::group_by(pep) %>% dplyr::select(pep, kegg)
     core_pep_kegg <- core_pep_kegg %>% dplyr::group_by(pep) %>%
@@ -41,8 +41,7 @@ core_pep_kegg <- reactive({
   }
   return(core_pep_kegg)
 })
-## need to change in code below
-## core_pep_kegg is now core_pep_kegg()
+
 
 values <- reactiveValues(btn = 0) # want to start the button count at 0 not 1... 
 
@@ -94,17 +93,12 @@ additional_conds <- reactive({
 
 get_data <- reactive({
   if (input$sample_data == "sample"){
-    inFile <- list(datapath = "peptides.txt")
+    inFile <- list(datapath = "./data/peptides.txt")
     } else {
   inFile <- input$file1 }
   validate(
     need(inFile != "", "Please upload a dataset.")
   )
-  
-#    exp_data <- read.delim("", row.names = 1) %>% 
-#      as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
-#    exp_data[exp_data==1] <-NA
-#  }
   if (input$file_fmt == "pep"){
     exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
       as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
@@ -117,7 +111,6 @@ get_data <- reactive({
   }
   exp_data
 })
-
 
 
 output$OriData <-renderRHandsontable({
@@ -133,13 +126,24 @@ output$OriData <-renderRHandsontable({
   values$condition_options <- condition_options
   if (input$format == "auto" | input$sample_data == "sample"){
     exp_data <- get_data()
-    samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
-    x <- data.frame(Samples = samplenames)
-    conditions <- purrr::map(condition_options, 
-                             ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
-    x <- x %>% mutate(Condition = case_when(!!!conditions))
-    rhandsontable(x) %>%
-      hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+    if (input$input.file_fmt == 'pep' | input$sample_data == 'sample'){
+         samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
+         x <- data.frame(Samples = samplenames)
+         conditions <- purrr::map(condition_options, 
+                                  ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
+         x <- x %>% mutate(Condition = case_when(!!!conditions))
+         rhandsontable(x) %>%
+           hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+    } else if (input$input.file_fmt == 'pep'){
+      ## should not assume that the columns start with "Intensity."
+      samplenames <- colnames(exp_data)
+      x <- data.frame(Samples = samplenames)
+      conditions <- purrr::map(condition_options, 
+                               ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
+      x <- x %>% mutate(Condition = case_when(!!!conditions))
+      rhandsontable(x) %>%
+        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition     
+    } 
   } else {
     
     exp_data <- get_data()

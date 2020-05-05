@@ -107,7 +107,7 @@ tabBox(
                                          style="color: #fff; background-color: #006E90; border-color: #006E90")
              ),
              mainPanel(
-               #plotOutput("heatmapPlot")
+               
               
                
                fluidRow(
