@@ -68,6 +68,9 @@ header <- dashboardHeader(title = span(img(src="logo_imetalab.png", width = 140)
 #  _side bar ------------------------------------------------------
 
 sidebar <- dashboardSidebar(
+  tags$head(
+    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+  ),
   width = 250,
   sidebarMenu(
     id = "tabs",
