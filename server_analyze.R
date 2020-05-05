@@ -671,11 +671,17 @@ output$dlPCA <- downloadHandler(
     ggsave(file,plot=values$plotpca)
   })
 
+#output$downloadKEGG <- downloadHandler(
+#  filename = function(){
+#    paste0('peptide_annotation', '.txt')
+#  },
+#  content = function(file){
+#    core_pep_kegg <- core_pep_kegg()
+#    write.table(core_pep_kegg, file, row.names = F, quote = F)}
+#)
 output$downloadKEGG <- downloadHandler(
-  filename = function(){
-    paste0('peptide_annotation', '.txt')
-  },
+  filename = "peptide_annotation.txt",
   content = function(file){
-    core_pep_kegg <- core_pep_kegg()
-    write.table(core_pep_kegg_only, file, row.names = F, quote = F)}
+    #core_pep_kegg <- core_pep_kegg()
+    write.table(core_pep_kegg(), file, row.names = F, quote = F)}
 )
