@@ -139,7 +139,7 @@ output$OriData <-renderRHandsontable({
     exp_data <- get_data()
     ## should not assume that the columns start with "Intensity."
     samplenames <- colnames(exp_data)
-    print(samplenames)
+
     x <- data.frame(Samples = samplenames)
     conditions <- purrr::map(condition_options, 
                              ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
@@ -209,8 +209,6 @@ get_plotdata <- reactive({
 
   if (input$file_fmt == 'pep'){
   removeintensity <- colnames(exp_data) %>% substr(., 11, nchar(.))
-  
- 
   core_kegg <- exp_data %>% as.data.frame() %>% 
     rownames_to_column(., var='pep') %>%
     merge(., core_pep_kegg, by='pep', all.x=T) %>% 
@@ -221,7 +219,7 @@ get_plotdata <- reactive({
     column_to_rownames(., var='correct_pep') %>%
     dplyr::select(starts_with('Intensity'))
     colnames(core_kegg) <-  removeintensity
-  
+
   } else if (input$file_fmt == 'csv'){
     original_colnames <- colnames(exp_data)
     colnames(exp_data) <- paste0("Temp.", colnames(exp_data))
@@ -238,8 +236,8 @@ get_plotdata <- reactive({
     
   }
   
-  
-  
+  new_conditions <- arrange(new_conditions, Condition)
+
   if (exists("ignore_cols")){
     new_samples <- new_conditions$Samples[-ignore_cols]
     conditions <- new_conditions$Condition[-ignore_cols]
@@ -250,17 +248,18 @@ get_plotdata <- reactive({
   
   
   cond_opts <- conditions %>% unique()
-
   cond_count <- table(conditions) %>% as.vector()
 
-  # filtering/removing missing data
-  core_kegg <- filter_valids(core_kegg, #we now have 51,395 (from 101,995)
-                           #conditions = c('1', '2', '3', '4', '5', '6'),
-                           #min_count = c(22, 23, 23, 22, 24, 24), #want peptide to have been identified in at least half of the samples 
-                           conditions = cond_opts,
-                           min_count = cond_count,
-                           at_least_one = TRUE)  #but if it is consistently identified in a condition, keep it
+  
+  core_kegg <- core_kegg %>% select(new_conditions$Samples)
 
+  # filtering/removing missing data
+  core_kegg <- filter_valids(core_kegg,
+                             conditions = cond_opts,
+                             min_count = cond_count/2,
+                             at_least_one = TRUE)  #but if it is consistently identified in a condition, keep it
+
+  
   norm_pep <- estimateSizeFactorsForMatrix(core_kegg) 
   exp_data <- sweep(as.matrix(core_kegg), 2, norm_pep, "/")
   peptides <- rownames(exp_data)
