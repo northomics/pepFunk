@@ -188,23 +188,23 @@ style="float:right; color: #fff;  background-color: #006E90; border-color: #006E
 })
 
 
-output$control_gsva <- renderUI({
-  x <- values$data
-  conditions <- x$Condition
-  if (input$restrict_analysis == "y"){
-    selectInput("control_gsva_select", "Control condition",
-               choices=conditions)
-    }
-})
-
-output$treatment_gsva <- renderUI({
-  x <- values$data
-  conditions <- x$Condition
-  if (input$restrict_analysis == "y"){
-    selectInput("treatment_gsva_select", "Treatment condition",
-                choices=conditions)
-  }
-})
+#output$control_gsva <- renderUI({
+#  x <- values$data
+#  conditions <- x$Condition
+#  if (input$restrict_analysis == "y"){
+#    selectInput("control_gsva_select", "Control condition",
+#               choices=conditions)
+#    }
+#})
+#
+#output$treatment_gsva <- renderUI({
+#  x <- values$data
+#  conditions <- x$Condition
+#  if (input$restrict_analysis == "y"){
+#    selectInput("treatment_gsva_select", "Treatment condition",
+#                choices=conditions)
+#  }
+#})
 
 get_plotdata <- reactive({
   
@@ -324,7 +324,7 @@ get_plotdata <- reactive({
     if (input$restrict_analysis == "y"){
       select_condition <- factor(condition_options)
       #names(select_condition) <- condition_options
-      selectInput("treatment_gsva_select", "Select control condition:",
+      selectInput("treatment_gsva_select", "Select treatment condition:",
                   select_condition)
     }else{
       return()
