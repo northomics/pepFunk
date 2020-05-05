@@ -6,13 +6,12 @@ fluidPage(
                         width =  4,
                         solidHeader = TRUE,
                         collapsible = FALSE,
+                        ## Database choice (gut microbiome or custom)
                         radioButtons("databaseChoice", "Peptide-to-KEGG database:",
                                      c("Curated human microbiome" = "curated",
                                        "Upload your own database" = "uploaded"),
                                      selected = "curated"),
-                       
-                        
-                        
+                       ## custom panel that shows if you want to upload your database
                         conditionalPanel(
                                          condition = "input.databaseChoice == 'uploaded'", 
                                          tags$hr(),

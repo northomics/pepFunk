@@ -99,12 +99,14 @@ get_data <- reactive({
   validate(
     need(inFile != "", "Please upload a dataset.")
   )
+  
+
   if (input$file_fmt == "pep"){
     exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
       as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
     exp_data[exp_data==1] <-NA
   } else {
-    exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+    exp_data <- read.delim(inFile$datapath, row.names = 1, sep=',') %>% 
       as.data.frame()
     exp_data[exp_data==1] <-NA
     values$btn <- 0 #resetting btn
@@ -124,28 +126,27 @@ output$OriData <-renderRHandsontable({
   }
  
   values$condition_options <- condition_options
-  if (input$format == "auto" | input$sample_data == "sample"){
+  if ((input$format == 'auto' & input$file_fmt == 'pep')| input$sample_data == 'sample'){
     exp_data <- get_data()
-    if (input$input.file_fmt == 'pep' | input$sample_data == 'sample'){
-         samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
-         x <- data.frame(Samples = samplenames)
-         conditions <- purrr::map(condition_options, 
-                                  ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
-         x <- x %>% mutate(Condition = case_when(!!!conditions))
-         rhandsontable(x) %>%
-           hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
-    } else if (input$input.file_fmt == 'pep'){
-      ## should not assume that the columns start with "Intensity."
-      samplenames <- colnames(exp_data)
-      x <- data.frame(Samples = samplenames)
-      conditions <- purrr::map(condition_options, 
-                               ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
-      x <- x %>% mutate(Condition = case_when(!!!conditions))
-      rhandsontable(x) %>%
-        hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition     
-    } 
-  } else {
-    
+    samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
+    x <- data.frame(Samples = samplenames)
+    conditions <- purrr::map(condition_options, 
+                             ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
+    x <- x %>% mutate(Condition = case_when(!!!conditions))
+    rhandsontable(x) %>%
+      hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+  } else if ((input$format == 'auto' & input$file_fmt == 'csv')){
+    exp_data <- get_data()
+    ## should not assume that the columns start with "Intensity."
+    samplenames <- colnames(exp_data)
+    print(samplenames)
+    x <- data.frame(Samples = samplenames)
+    conditions <- purrr::map(condition_options, 
+                             ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
+    x <- x %>% mutate(Condition = case_when(!!!conditions))
+    rhandsontable(x) %>%
+      hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition     
+  } else if (input$format == 'manual' & input$file_fmt == 'pep'){
     exp_data <- get_data()
     samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
     x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep(NA, length(samplenames))), 
@@ -153,8 +154,18 @@ output$OriData <-renderRHandsontable({
    
      rhandsontable(x) %>%
       hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
-  }
-} 
+  } else if (input$format == 'manual' & input$file_fmt == 'csv'){
+  exp_data <- get_data()
+  ## should not assume that the columns start with "Intensity."
+  samplenames <- colnames(exp_data)
+  
+  x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep(NA, length(samplenames))), 
+                  stringsAsFactors = FALSE)
+  
+  rhandsontable(x) %>%
+    hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
+  } 
+}
 )
 
 
@@ -206,6 +217,7 @@ get_plotdata <- reactive({
   #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
   core_pep_kegg <- core_pep_kegg()
   exp_data <- get_data()  
+  
   ## allow users to ignore samples
   new_conditions <- values$data
   if (any(is.na(new_conditions$Condition == T))) { # only subset the dataframe if use input NA
@@ -213,7 +225,7 @@ get_plotdata <- reactive({
     exp_data <- exp_data[,-ignore_cols]
   }
 
-  
+  if (input$file_fmt == 'pep'){
   removeintensity <- colnames(exp_data) %>% substr(., 11, nchar(.))
   
  
@@ -226,8 +238,25 @@ get_plotdata <- reactive({
                                    !is.na(newpep_name) ~ newpep_name)) %>%
     column_to_rownames(., var='correct_pep') %>%
     dplyr::select(starts_with('Intensity'))
+    colnames(core_kegg) <-  removeintensity
   
-  colnames(core_kegg) <-  removeintensity
+  } else if (input$file_fmt == 'csv'){
+    original_colnames <- colnames(exp_data)
+    colnames(exp_data) <- paste0("Temp.", colnames(exp_data))
+    core_kegg <- exp_data %>% as.data.frame() %>% 
+      rownames_to_column(., var='pep') %>%
+      merge(., core_pep_kegg, by='pep', all.x=T) %>% 
+      mutate(prop=replace(prop, is.na(prop), 1)) %>%
+      mutate_each(funs(.*prop), starts_with('Temp.')) %>% #multiplies the intensities by the proportion 
+      mutate(correct_pep = case_when(is.na(newpep_name) ~ pep,
+                                     !is.na(newpep_name) ~ newpep_name)) %>%
+      column_to_rownames(., var='correct_pep') %>%
+      dplyr::select(starts_with('Temp'))
+    colnames(core_kegg) <-  original_colnames
+    
+  }
+  
+  
   
   if (exists("ignore_cols")){
     new_samples <- new_conditions$Samples[-ignore_cols]
