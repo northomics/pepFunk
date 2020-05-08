@@ -4,7 +4,11 @@
 
 This is the source code for the [pepFunk R shiny app](https://shiny.imetalab.ca/pepFunk). 
 
-Please see the [preprint](https://www.biorxiv.org/content/10.1101/854976v1) for information on the methodology used.
+Please see our [published manuscript in Bioinformatics](https://doi.org/10.1093/bioinformatics/btaa289) or our [preprint](https://www.biorxiv.org/content/10.1101/854976v1) for information on the methodology used.
+
+If you use pepFunk, please cite:
+
+Simopoulos, CMA, Ning, Z, Zhang, X, Li, L, Walker, K, Lavallée-Adam, M, Figeys, D. pepFunk: a tool for peptide-centric functional analysis of metaproteomic human gut microbiome studies, Bioinformatics, btaa289, https://doi.org/10.1093/bioinformatics/btaa289
 
 ## How to run the app
 
