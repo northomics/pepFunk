@@ -74,10 +74,10 @@ sidebar <- dashboardSidebar(
   width = 250,
   sidebarMenu(
     id = "tabs",
-    menuItem("Upload Data", tabName = "dashboard", icon = icon("file")),
+    menuItem("Upload Data", tabName = "dashboard", icon = icon("table")),
     # Get icon codes from here: https://fontawesome.com/v4.7.0/icons/
     sidebarMenuOutput("menu1"),
-    menuItem("Analysis", tabName = "Analysis", icon = icon("file")),
+    menuItem("Analysis", tabName = "Analysis", icon = icon("cog")),
     menuItem("Gallery", tabName = "gallery", icon = icon("picture-o")),
     menuItem("About", tabName = "about", icon = icon("question-circle")),
     menuItem("iMetaLab", icon = icon("home"), 

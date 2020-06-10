@@ -259,17 +259,23 @@ get_plotdata <- reactive({
                              min_count = cond_count/2,
                              at_least_one = TRUE)  #but if it is consistently identified in a condition, keep it
 
+  if (input$sizefact == 'yes'){
+    norm_pep <- estimateSizeFactorsForMatrix(core_kegg) #you can add 1 to all values.. 
+    exp_data <- sweep(as.matrix(core_kegg), 2, norm_pep, "/")
+  } else {
+      exp_data <- core_kegg
+  }
   
-  norm_pep <- estimateSizeFactorsForMatrix(core_kegg) 
-  exp_data <- sweep(as.matrix(core_kegg), 2, norm_pep, "/")
   peptides <- rownames(exp_data)
   if (input$normalize == "log10"){
   exp_data <- data.frame(exp_data) %>% #dplyr::select(starts_with('Intensity')) %>%
     mutate_all(., funs(log10(1 + .)))
-  } else{
+  } else if (input$normalize == "log2"){
     exp_data <- data.frame(exp_data) %>% #dplyr::select(starts_with('Intensity')) %>%
       mutate_all(., funs(log2(1 + .)))
-  }# %>% ##should be log10 data...
+  } else (
+    exp_data <- data.frame(exp_data)
+  )
   rownames(exp_data) <- peptides
   
   

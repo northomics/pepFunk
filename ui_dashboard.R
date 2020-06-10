@@ -97,17 +97,27 @@ fluidPage(
                  
 #                 conditionalPanel(
 #                   condition = "output.fileUploaded1 == TRUE",
-                   box(title = "3. Go to analysis",
+                   box(title = "3. Analysis options",
                      status = "primary", 
                        width =  12,
                        solidHeader = TRUE,
                        collapsible = FALSE, 
-                     h4("A. Choose log transformation"),
+                     h4("A. Data Normalization"),
+                     radioButtons("sizefact", "Would you like pepFunk to normalize your data by depth?",
+                                  c("Yes" = "yes",
+                                    "No" = "no"), 
+                                  selected = "yes"),
+                     helpText("Note: If you opt for no normalization, we highly recommend you normalize 
+                              your data using your own methods before uploading to pepFunk.
+                              If you'd like to know more about our normalization technique, please see our manuscript
+                              (https://doi.org/10.1093/bioinformatics/btaa289)."),
+                     h4("B. Choose log transformation"),
                      radioButtons("normalize", "Transform intensity values using:",
                                   c("Log10" = "log10",
-                                    "Log2" = "log2"), 
+                                    "Log2" = "log2",
+                                    "No transformation" = "NoTransf"), 
                                   selected = "log2"),
-                     h4("B. Choose peptide-to-KEGG database"),
+                     h4("C. Choose peptide-to-KEGG database"),
                      ## Database choice (gut microbiome or custom)
                      radioButtons("databaseChoice", "Peptide-to-KEGG database:",
                                   c("Curated human microbiome" = "curated",
