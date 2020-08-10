@@ -413,7 +413,8 @@ observeEvent(input$genplotheat,{
     fit<- eBayes(fit, trend=T)
 
   } else { #plot and analyse ALL the data (no restrictions)
-    control_cond <- input$control_sample
+    control_cond <- input$control
+    print(control_cond)
     cond <- factor(new_conditions$Condition) %>% relevel(control_cond) # DMSO is the control
     design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
     colnames(design)[1] <- c(control_cond) 
@@ -453,7 +454,7 @@ observeEvent(input$genplotheat,{
     if (input$restrict_analysis == "y"){
       control_cond <- input$control_gsva_select 
     } else {
-      control_cond <- input$control_sample
+      control_cond <- input$control
     }
     
     if (ncol(sig_tests %>% as.data.frame()) >= 2){
