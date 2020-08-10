@@ -414,7 +414,6 @@ observeEvent(input$genplotheat,{
 
   } else { #plot and analyse ALL the data (no restrictions)
     control_cond <- input$control
-    print(control_cond)
     cond <- factor(new_conditions$Condition) %>% relevel(control_cond) # DMSO is the control
     design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
     colnames(design)[1] <- c(control_cond) 
