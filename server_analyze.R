@@ -398,7 +398,7 @@ observeEvent(input$genplotheat,{
   new_samples <- new_conditions$Samples
   
   withProgress(message = 'Making plot', value = 0, { #want a progress bar
-  
+
   if (input$restrict_analysis == "y" ){ # make design matrix for restricted analysis (pairwise comparisons)
     control <- input$control_gsva_select
     treatment <- input$treatment_gsva_select
@@ -413,12 +413,19 @@ observeEvent(input$genplotheat,{
     fit<- eBayes(fit, trend=T)
 
   } else { #plot and analyse ALL the data (no restrictions)
+    if (input$sample_data=="sample"){
+    control_cond <- input$control_sample
+    } else {
     control_cond <- input$control
-    cond <- factor(new_conditions$Condition) %>% relevel(control_cond) # DMSO is the control
-    design <- model.matrix(~  cond) # we are comparing all to DMSO which is our control
+    }
+   
+    cond <- factor(new_conditions$Condition) %>% relevel(control_cond) 
+
+    design <- model.matrix(~  cond) 
     colnames(design)[1] <- c(control_cond) 
     colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
                                                nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
+
     fit <- lmFit(gsva_kegg, design)
     fit <- eBayes(fit, trend=T)
 
@@ -452,7 +459,9 @@ observeEvent(input$genplotheat,{
     ## only looking at significantly altered gene sets.
     if (input$restrict_analysis == "y"){
       control_cond <- input$control_gsva_select 
-    } else {
+    } else if (input$sample_data=="sample"){
+      control_cond <- input$control_sample
+      } else {
       control_cond <- input$control
     }
     
