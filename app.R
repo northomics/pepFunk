@@ -145,6 +145,18 @@ body <- dashboardBody(
                 We curated peptide database specific to human gut microbiome studies for computational speed.
               "
               )
+            ),
+            fluidRow(
+              box(
+                title = "Updates", 
+                solidHeader = TRUE,
+                status = "primary", 
+                width = 12,
+                "January 22, 2021",
+                br(),
+                "Fixed a bug where manual condition entering would cause an error.
+              "
+              )
             )   
     )
   ),
