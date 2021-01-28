@@ -151,10 +151,11 @@ output$OriData <-renderRHandsontable({
     samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
     x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep(NA, length(samplenames))), 
                     stringsAsFactors = FALSE)
-   
      rhandsontable(x) %>%
       hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
-  } else if (input$format == 'manual' & input$file_fmt == 'csv'){
+ 
+    
+      } else if (input$format == 'manual' & input$file_fmt == 'csv'){
   exp_data <- get_data()
   ## should not assume that the columns start with "Intensity."
   samplenames <- colnames(exp_data)
@@ -164,7 +165,8 @@ output$OriData <-renderRHandsontable({
   
   rhandsontable(x) %>%
     hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
-  } 
+
+   } 
 }
 )
 
@@ -236,13 +238,15 @@ get_plotdata <- reactive({
     
   }
   
-  new_conditions <- arrange(new_conditions, Condition)
-
+  new_conditions <- arrange(new_conditions, Condition) # change sample names (and column names) to contain condition
+  new_conditions <- new_conditions %>% mutate(new_name = paste0(Samples, "_", Condition)) 
   if (exists("ignore_cols")){
     new_samples <- new_conditions$Samples[-ignore_cols]
+    new_names <- new_conditions$new_names[-ignore_cols] # so that you can update column names
     conditions <- new_conditions$Condition[-ignore_cols]
   } else {
     new_samples <- new_conditions$Samples
+    new_names <- new_conditions$new_names
     conditions <- new_conditions$Condition
   }
   
@@ -250,9 +254,18 @@ get_plotdata <- reactive({
   cond_opts <- conditions %>% unique()
   cond_count <- table(conditions) %>% as.vector()
 
-  
   core_kegg <- core_kegg %>% select(new_conditions$Samples)
-
+  
+  ## THIS ISN'T WORKING, WHY?
+  if (input$format == 'manual'){
+    colnames(core_kegg) <- new_conditions$new_name
+    new_conditions$Samples <- new_conditions$new_name
+    new_samples <- new_conditions$Samples
+    colnames(core_kegg) <- new_conditions$Samples
+  } else if (input$format == 'auto') {
+    colnames(core_kegg) <- new_conditions$Samples
+  }
+  
   # filtering/removing missing data
   core_kegg <- filter_valids(core_kegg,
                              conditions = cond_opts,
@@ -395,7 +408,8 @@ pca_plotdata <- reactive({
 observeEvent(input$genplotheat,{
   gsva_kegg <- get_plotdata()[['gsva_kegg']]
   new_conditions <- get_plotdata()[['new_conditions']]
-  new_samples <- new_conditions$Samples
+  #new_samples <- new_conditions$Samples
+  new_samples <- new_conditions$new_names
   
   withProgress(message = 'Making plot', value = 0, { #want a progress bar
 
@@ -420,7 +434,7 @@ observeEvent(input$genplotheat,{
     }
    
     cond <- factor(new_conditions$Condition) %>% relevel(control_cond) 
-
+    print(cond)  
     design <- model.matrix(~  cond) 
     colnames(design)[1] <- c(control_cond) 
     colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
@@ -477,9 +491,6 @@ observeEvent(input$genplotheat,{
     if (input$fig_type == "heatmap"){    
     gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
       melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'Samples')
-    
-    
-    
     
     ## chosing if we want to plot kegg by p-value or by clustering!
     if (input$kegg_ord == 'clust'){
