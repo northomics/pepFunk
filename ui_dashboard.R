@@ -143,6 +143,7 @@ fluidPage(
                        helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence 
                                 the second column is the KO term, and the third column is the number of times that peptide was 
                                 annotated with the KO term.")
+                       ),
                        
                      ##COG chosen
                      conditionalPanel(
@@ -163,6 +164,7 @@ fluidPage(
                        helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence 
                                 the second column is the COG term, and the third column is the number of times that peptide was 
                                 annotated with the COG term.")
+                       ),
                        
                      ##eggNOG chosen
                      conditionalPanel(
@@ -183,7 +185,7 @@ fluidPage(
                        helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence 
                                 the second column is the eggNOG term, and the third column is the number of times that peptide was 
                                 annotated with the eggNOG term.")
-                       
+                       ),
                      
                      tags$hr(),
                        uiOutput("gotoanalysisbutton"))
