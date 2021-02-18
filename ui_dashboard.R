@@ -117,7 +117,7 @@ fluidPage(
                                     "Log2" = "log2",
                                     "No transformation" = "NoTransf"), 
                                   selected = "log2"),
-                     h4("C. Choose peptide-to-KEGG database"),
+                     h4("C. Choose peptide annotation database"),
                      ## Database choice (gut microbiome or custom)
                      radioButtons("databaseChoice", "Peptide-to-KEGG database:",
                                   c("Curated human microbiome" = "curated",
