@@ -117,24 +117,73 @@ fluidPage(
                                     "Log2" = "log2",
                                     "No transformation" = "NoTransf"), 
                                   selected = "log2"),
-                     h4("C. Choose peptide annotation database"),
-                     ## Database choice (gut microbiome or custom)
-                     radioButtons("databaseChoice", "Peptide-to-KEGG database:",
-                                  c("Curated human microbiome" = "curated",
-                                    "Upload your own database" = "uploaded"),
-                                  selected = "curated"),
-                     ## custom panel that shows if you want to upload your database
+                     h4("C. Choose peptide annotation type"),
+                     ## Annotation type choice
+                     radioButtons("databaseType", "Annotation Type:",
+                                  c("KEGG" = "kegg",
+                                    "COG" = "cog",
+                                    "eggNOG" = "eggnog"),
+                                  selected = "kegg"),
+                     ##KEGG chosen
                      conditionalPanel(
-                       condition = "input.databaseChoice == 'uploaded'", 
+                       condition = "input.databaseChoice == 'kegg'",
                        tags$hr(),
-                       fileInput("databasefile", "Choose your database file:",
+                       radioButtons("databaseChoice", "Peptide-to-KEGG database:",
+                                  c("Curated human microbiome" = "curated_kegg",
+                                    "Upload your own database" = "uploaded_kegg"),
+                                    selected = "curated_kegg"),
+                       ##custom panel shows if you want to upload your database
+                       conditionalPanel(
+                         condition = "input.databaseChoice == 'uploaded_kegg'",
+                         tags$hr(),
+                         fileInput("databasefile", "Choose your database file:",
                                  accept = c("text/csv",
                                             "text/comma-separated-values,text/plain",
                                             ".csv")),
                        helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence 
                                 the second column is the KO term, and the third column is the number of times that peptide was 
                                 annotated with the KO term.")
-                     ),
+                       
+                     ##COG chosen
+                     conditionalPanel(
+                       condition = "input.databaseChoice == 'cog'",
+                       tags$hr(),
+                       radioButtons("databaseChoice", "Peptide-to-COG database:",
+                                  c("Curated human microbiome" = "curated_cog",
+                                    "Upload your own database" = "uploaded_cog"),
+                                    selected = "curated_cog"),
+                       ##custom panel shows if you want to upload your database
+                       conditionalPanel(
+                         condition = "input.databaseChoice == 'uploaded_cog'",
+                         tags$hr(),
+                         fileInput("databasefile", "Choose your database file:",
+                                 accept = c("text/csv",
+                                            "text/comma-separated-values,text/plain",
+                                            ".csv")),
+                       helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence 
+                                the second column is the COG term, and the third column is the number of times that peptide was 
+                                annotated with the COG term.")
+                       
+                     ##eggNOG chosen
+                     conditionalPanel(
+                       condition = "input.databaseChoice == 'eggnog'",
+                       tags$hr(),
+                       radioButtons("databaseChoice", "Peptide-to-KEGG database:",
+                                  c("Curated human microbiome" = "curated_eggnog",
+                                    "Upload your own database" = "uploaded_eggnog"),
+                                    selected = "curated_eggnog"),
+                       ##custom panel shows if you want to upload your database
+                       conditionalPanel(
+                         condition = "input.databaseChoice == 'uploaded_eggnog'",
+                         tags$hr(),
+                         fileInput("databasefile", "Choose your database file:",
+                                 accept = c("text/csv",
+                                            "text/comma-separated-values,text/plain",
+                                            ".csv")),
+                       helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence 
+                                the second column is the eggNOG term, and the third column is the number of times that peptide was 
+                                annotated with the eggNOG term.")
+                       
                      
                      tags$hr(),
                        uiOutput("gotoanalysisbutton"))
