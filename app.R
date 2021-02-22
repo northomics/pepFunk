@@ -155,7 +155,12 @@ body <- dashboardBody(
                 "January 22, 2021",
                 br(),
                 "Fixed a bug where manual condition entering would cause an error.
-              "
+              ",
+                br(),
+                "February 22, 2021",
+                br(),
+                "Fixed a bug to allow 10 conditions."
+              
               )
             )   
     )

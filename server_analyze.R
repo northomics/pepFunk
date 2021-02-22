@@ -290,8 +290,6 @@ get_plotdata <- reactive({
     exp_data <- data.frame(exp_data)
   )
   rownames(exp_data) <- peptides
-  
-  
   # applying function over our pathway list
   kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg', core_pep_kegg = core_pep_kegg) 
   
@@ -605,17 +603,26 @@ observeEvent(input$genplotpca, {
   xaxislabel <- paste0("PC", xaxis, " ", xperc)
   
   ## colours are stored under input$colours1 : input$coloursn where n is values$btn + 2
-  plotcolours <- paste0("input$colour", 1:(values$btn+2)) 
-  ## to change the character vector into object names
+  new_conditions <- values$data # get reactive 
+   num_of_cond <- new_conditions$Condition %>% unique() %>% length()
+   #plotcolours <- paste0("input$colour", 1:(values$btn+2)) 
+   plotcolours <- paste0("input$colour", 1:num_of_cond) 
+    ## to change the character vector into object names
   plotcolours <- unlist(lapply(plotcolours,function(s) eval(parse(text=s)))) 
   ## prefer to use shapes that can be filled in...
-  if (values$btn < 4) {
-    shapes <- c(21,22,23,24,25)
+#  if (values$btn < 4) {
+   if (num_of_cond < 4) {
+     shapes <- c(21,22,23,24,25)
   } else {
     shapes <- c(1:25)
   }
-  shapes2use <- shapes[1:(values$btn+2)]
-  values$plotpca <- ggplot(coords, aes_string(x = paste0('PC', xaxis), y = paste0('PC', yaxis))) + #accept selectInput to choose axes!
+#  shapes2use <- shapes[1:(values$btn+2)]
+  shapes2use <- shapes[1:num_of_cond]
+   #print(values$btn)
+  #print(plotcolours)
+  #print(shapes2use)
+    
+    values$plotpca <- ggplot(coords, aes_string(x = paste0('PC', xaxis), y = paste0('PC', yaxis))) + #accept selectInput to choose axes!
     geom_point(size=3, aes_string(fill="condition", shape="condition")) + 
     stat_ellipse(geom = "polygon", alpha=.2, aes_string(color="condition", fill="condition")) +
     #scale_color_manual(values=c(input$control_col, input$cond1_col, input$cond2_col)) + #pick colours for colour picker
@@ -630,18 +637,27 @@ observeEvent(input$genplotpca, {
 }) 
 
 observeEvent(input$genclustdendro, {
+  new_conditions <- values$data # get reactive 
   if (input$sample_data == 'sample') {
     condition_options <-  c(input$control_sample, input$othercond_sample, input$finalcond_sample)
     values$btn <- 1
-  } else if (values$btn > 0) {
-    additional_conds <- additional_conds()
-    condition_options <- c(input$control, input$othercond, additional_conds())
-  } else {
-    condition_options <- c(input$control, input$othercond)
+#  } else if (values$btn > 0) {
+#    additional_conds <- additional_conds()
+#    condition_options <- c(input$control, input$othercond, additional_conds())
+#  } else {
+#    condition_options <- c(input$control, input$othercond)
+#  }
+  } else{
+    condition_options <- new_conditions$Condition %>% unique()
   }
-  ## colours are stored under input$colours1 : input$coloursn where n is values$btn + 2
-  plotcolours <- paste0("input$colour2_", 1:(values$btn+2)) 
-  ## to change the character vector into object names
+ print(condition_options)
+   ## colours are stored under input$colours1 : input$coloursn where n is values$btn + 2
+#plotcolours <- paste0("input$colour2_", 1:(values$btn+2)) 
+  new_conditions <- values$data # get reactive 
+  num_of_cond <- new_conditions$Condition %>% unique() %>% length()
+  #plotcolours <- paste0("input$colour", 1:(values$btn+2)) 
+  plotcolours <- paste0("input$colour", 1:num_of_cond) 
+   ## to change the character vector into object names
   plotcolours <- unlist(lapply(plotcolours,function(s) eval(parse(text=s)))) 
   log_exp <- get_plotdata()[['exp_data']]
   dist_method <- input$dist_method
