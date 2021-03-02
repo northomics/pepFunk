@@ -126,6 +126,7 @@ fluidPage(
                                   selected = "kegg"),
 
                      ## KEGG chosen
+                  if ("input.databaseType" == "kegg") {
                      conditionalPanel(
                        condition = "input.databaseType == 'kegg'",
                        tags$hr(),
@@ -145,8 +146,17 @@ fluidPage(
                                 the second column is the KO term, and the third column is the number of times that peptide was
                                 annotated with the KO term.")
                      ),
+                     tags$hr(),
+                       uiOutput("gotoanalysisbutton"))
+#                       actionButton("gotoanalysis",
+#                                    icon = icon("arrow-right"),
+#                                    label = "Continue to peptide centric analysis!",
+#                                    style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4"
+#                       )
+                  }
 
                      ## COG chosen
+                  else if ("input.databaseType" == "cog") {
                      conditionalPanel(
                        condition = "input.databaseType == 'cog'",
                        tags$hr(),
@@ -167,7 +177,17 @@ fluidPage(
                                 annotated with the COG term.")
                      ),
 
+                     tags$hr(),
+                       uiOutput("gotoanalysisbutton"))
+#                       actionButton("gotoanalysis",
+#                                    icon = icon("arrow-right"),
+#                                    label = "Continue to peptide centric analysis!",
+#                                    style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4"
+#                       )
+                }
+
                      ## eggNOG chosen
+                else {
                      conditionalPanel(
                        condition = "input.databaseType == 'eggnog'",
                        tags$hr(),
@@ -195,9 +215,10 @@ fluidPage(
 #                                    label = "Continue to peptide centric analysis!",
 #                                    style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4"
 #                       )
+                 }
 
-            
+
 
           )
        ))
-)))
+)
