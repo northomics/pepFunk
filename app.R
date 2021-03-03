@@ -140,7 +140,7 @@ body <- dashboardBody(
                 br(),
                 "pepFunk allows you to complete a peptide-focused functional enrichment workflow for gut microbiome metaproteomic studies.
                 
-                This workflow uses KEGG annotation for pathway enrichment, alongside Gene Set Variation Analysis (GSVA) adapted for peptide data.
+                This workflow uses KEGG, COG, or eggNOG annotation for pathway enrichment, alongside Gene Set Variation Analysis (GSVA) adapted for peptide data.
                 By completing analysis on peptides, rather than proteins, we lose less information and retain more statistical power.
                 We curated peptide database specific to human gut microbiome studies for computational speed.
               "
