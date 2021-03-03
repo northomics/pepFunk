@@ -126,98 +126,73 @@ fluidPage(
                             selected = "kegg"),
 
                ## KEGG chosen
-
+## Note: all "databaseChoice"s now have annotation type at the end: eg. databaseChoicekegg
+## Same as with databasefile (databasefilekegg)
                  conditionalPanel(
-                   condition = "input.databaseType != 'cog' && input.databaseType != 'eggnog'",
+                   condition = "input.databaseType == 'kegg' & input.databaseType != 'cog' & input.databaseType != 'eggnog'",
                    tags$hr(),
-                   radioButtons("databaseChoice", "Peptide-to-KEGG database:",
+                   radioButtons("databaseChoicekegg", "Peptide-to-KEGG database:",
                                 c("Curated human microbiome" = "curated_kegg",
                                   "Upload your own database" = "uploaded_kegg"),
                                 selected = "curated_kegg")),
-                   ## custom panel shows if you want to upload your database
-                   conditionalPanel(
-                     condition = "input.databaseChoice == 'uploaded_kegg'",
-                     tags$hr(),
-                     fileInput("databasefile", "Choose your database file:",
-                               accept = c("text/csv",
-                                          "text/comma-separated-values,text/plain",
-                                          ".csv")),
-                     helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence
-                                the second column is the KO term, and the third column is the number of times that peptide was
-                                annotated with the KO term."),
-
-                   tags$hr(),
-                   uiOutput("gotoanalysisbutton")),
-                 #                       actionButton("gotoanalysis",
-                 #                                    icon = icon("arrow-right"),
-                 #                                    label = "Continue to peptide centric analysis!",
-                 #                                    style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4"
-                 #                       )
-
-
-               ## COG chosen
-
                  conditionalPanel(
-                   condition = "input.databaseType != 'kegg' && input.databaseType != 'eggnog'",
+                   condition = "input.databaseChoicekegg == 'uploaded_kegg'",
                    tags$hr(),
-                   radioButtons("databaseChoice", "Peptide-to-COG database:",
-                                c("Curated human microbiome" = "curated_cog",
-                                  "Upload your own database" = "uploaded_cog"),
-                                selected = "curated_cog")),
-                   ## custom panel shows if you want to upload your database
-                   conditionalPanel(
-                     condition = "input.databaseChoice == 'uploaded_cog'",
-                     tags$hr(),
-                     fileInput("databasefile", "Choose your database file:",
-                               accept = c("text/csv",
-                                          "text/comma-separated-values,text/plain",
-                                          ".csv")),
-                     helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence
-                                the second column is the COG term, and the third column is the number of times that peptide was
-                                annotated with the COG term."),
+                   fileInput("databasefilekegg", "Choose your database file:",
+                             accept = c("text/csv",
+                                        "text/comma-separated-values,text/plain",
+                                        ".csv")),
+                   helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence
+                              the second column is the KEGG, and the third column is the number of times that peptide was
+                              annotated with the KEGG term.")),
+              
+               conditionalPanel(
+                 condition = "input.databaseType != 'kegg' & input.databaseType == 'cog' & input.databaseType != 'eggnog'",
+                 tags$hr(),
+                 radioButtons("databaseChoicecog", "Peptide-to-COG database:",
+                              c("Curated human microbiome" = "curated_cog",
+                                "Upload your own database" = "uploaded_cog"),
+                              selected = "curated_cog")),
+              conditionalPanel(
+                condition = "input.databaseChoicecog == 'uploaded_cog'",
+                tags$hr(),
+                fileInput("databasefilecog", "Choose your database file:",
+                          accept = c("text/csv",
+                                     "text/comma-separated-values,text/plain",
+                                     ".csv")),
+                helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence
+                                            the second column is the COG, and the third column is the number of times that peptide was
+                                            annotated with the COG term.")),
+                
+               
+           
+               conditionalPanel(
+                 condition = "input.databaseType != 'kegg' & input.databaseType != 'cog' & input.databaseType == 'eggnog'",
+                 tags$hr(),
+                 radioButtons("databaseChoiceeggNOG", "Peptide-to-eggNOG database:",
+                              c("Curated human microbiome" = "curated_eggNOG",
+                                "Upload your own database" = "uploaded_eggNOG"),
+                              selected = "curated_eggNOG")),
+                conditionalPanel(
+                 condition = "input.databaseChoiceeggNOG == 'uploaded_eggNOG'",
+                 tags$hr(),
+                 fileInput("databasefileeggNOG", "Choose your database file:",
+                           accept = c("text/csv",
+                                      "text/comma-separated-values,text/plain",
+                                      ".csv")),
+                 helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence
+                                           the second column is the eggNOG, and the third column is the number of times that peptide was
+                                           annotated with the eggNOG term.")),
+    
+                tags$hr(),
+                uiOutput("gotoanalysisbutton"),
+         actionButton("gotoanalysis",
+                      icon = icon("arrow-right"),
+                      label = "Continue to peptide centric analysis!",
+                      style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4"
+         )
 
-                   tags$hr(),
-                   uiOutput("gotoanalysisbutton")),
-                 #                       actionButton("gotoanalysis",
-                 #                                    icon = icon("arrow-right"),
-                 #                                    label = "Continue to peptide centric analysis!",
-                 #                                    style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4"
-                 #                       )
-
-
-               ## eggNOG chosen
-
-                 conditionalPanel(
-                   condition = "input.databaseType != 'kegg' && input.databaseType != 'cog'",
-                   tags$hr(),
-                   radioButtons("databaseChoice", "Peptide-to-eggNOG database:",
-                                c("Curated human microbiome" = "curated_eggnog",
-                                  "Upload your own database" = "uploaded_eggnog"),
-                                selected = "curated_eggnog")),
-                   ## custom panel shows if you want to upload your database
-                   conditionalPanel(
-                     condition = "input.databaseChoice == 'uploaded_eggnog'",
-                     tags$hr(),
-                     fileInput("databasefile", "Choose your database file:",
-                               accept = c("text/csv",
-                                          "text/comma-separated-values,text/plain",
-                                          ".csv")),
-                     helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence
-                                the second column is the eggNOG term, and the third column is the number of times that peptide was
-                                annotated with the eggNOG term."),
-
-
-                   tags$hr(),
-                   uiOutput("gotoanalysisbutton")),
-                 #                       actionButton("gotoanalysis",
-                 #                                    icon = icon("arrow-right"),
-                 #                                    label = "Continue to peptide centric analysis!",
-                 #                                    style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4"
-                 #                       )
-
-
-
-
-           )
-    ))
-)
+) #box close
+    ) # column close
+  ) #fluidrow close
+) #fluidpage close
