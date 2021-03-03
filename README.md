@@ -10,6 +10,10 @@ If you use pepFunk, please cite:
 
 Simopoulos, CMA, Ning, Z, Zhang, X, Li, L, Walker, K, Lavallée-Adam, M, Figeys, D. pepFunk: a tool for peptide-centric functional analysis of metaproteomic human gut microbiome studies, Bioinformatics, btaa289, https://doi.org/10.1093/bioinformatics/btaa289
 
+## We now have a wiki!
+
+Please visit our [wiki tutorial](https://github.com/northomics/pepFunk/wiki/How-to-Create-and-Use-Your-Own-Peptide-Database-in-pepFunk) on how to create your own peptide annotation database.
+
 ## How to run the app
 
 The easiest way to run the app is by using [RStudio](https://rstudio.com).
