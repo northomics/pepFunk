@@ -1,0 +1,13 @@
+Columns for each tsv file
+
+COG.2020.categories.tsv
+
+COG, Protein name, Pathway (if applicable), Letter (for COG 2020 categories), Function (COG 2020 category)
+
+eggNOG.v5.categories.tsv
+
+eggNOG, Description (if applicable), Letter (for COG 2014 categories), Function (COG 2014 category)
+
+kegg.L3.categories.tsv
+
+KO term, Enzyme [EC number], Pathway, Pathway Name
