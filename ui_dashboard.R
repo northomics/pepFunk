@@ -145,7 +145,7 @@ fluidPage(
                    helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence
                               the second column is the KEGG, and the third column is the number of times that peptide was
                               annotated with the KEGG term.")),
-              
+
                conditionalPanel(
                  condition = "input.databaseType != 'kegg' & input.databaseType == 'cog' & input.databaseType != 'eggnog'",
                  tags$hr(),
@@ -163,9 +163,9 @@ fluidPage(
                 helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence
                                             the second column is the COG, and the third column is the number of times that peptide was
                                             annotated with the COG term.")),
-                
-               
-           
+
+
+
                conditionalPanel(
                  condition = "input.databaseType != 'kegg' & input.databaseType != 'cog' & input.databaseType == 'eggnog'",
                  tags$hr(),
@@ -183,14 +183,10 @@ fluidPage(
                  helpText("Note: Your database must be comma separated (.csv) where the first column is the peptide sequence
                                            the second column is the eggNOG, and the third column is the number of times that peptide was
                                            annotated with the eggNOG term.")),
-    
+
                 tags$hr(),
                 uiOutput("gotoanalysisbutton"),
-         actionButton("gotoanalysis",
-                      icon = icon("arrow-right"),
-                      label = "Continue to peptide centric analysis!",
-                      style="float:right; color: #fff; background-color: #337ab7; border-color: #2e6da4"
-         )
+        
 
 ) #box close
     ) # column close
