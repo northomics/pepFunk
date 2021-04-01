@@ -16,7 +16,7 @@ plotheight <- reactive({
 
 ## if users want to use their own database
 core_pep_kegg <- reactive({
-  if (input$databaseChoice == 'curated'){
+  if (input$databaseChoicekegg == 'curated_kegg'){
     ## Core kegg database
     core_pep_kegg <- read.delim("./data/core_pep_kegg_db.csv", 
                                 sep=",", header=F, col.names = c("pep", "kegg", "count"))
