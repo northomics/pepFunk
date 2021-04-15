@@ -21,10 +21,10 @@ library(shinycssloaders)
 # devtools::install_github("johannesbjork/LaCroixColoR")
 # install.packages.auto(DESeq2)
 # install.packages.auto(GSVA)
-# 
+#
 # # if (!requireNamespace("BiocManager", quietly = TRUE))
 # # install.packages("BiocManager")
-# # 
+# #
 # # BiocManager::install("DESeq2")
 # # BiocManager::install("GSVA")
 
@@ -40,13 +40,19 @@ source("peptide_centric_module.R")
 # DATA # # should add files to this folder
 ########
 
-## Full KEGG database
-kegg_L3 <- read.delim("./data/kegg.L3.categories.tsv", sep='\t', header=F, 
+## Full KEGG pathways database
+kegg_L3 <- read.delim("./data/kegg.L3.categories.tsv", sep='\t', header=F,
                       col.names=c('L3', 'L3_desc', 'L4', 'L4_desc'),
                       colClasses=c('character','character','character','character')) %>% as.data.frame()
-pathways <- kegg_L3$L4_desc %>% unique() 
-pathways <- pathways[-c(208:229)] #removing KO that are not in brite/pathway
+KOpathways <- kegg_L3$L4_desc %>% unique()
 pathway_kegg <- dlply(kegg_L3 %>% dplyr::select(L4_desc, L3), .(L4_desc))
+
+## Full COG pathways database
+cog_categories <- read.delim("./data/COG.2020.categories.tsv", sep='\t', header=F,
+                      col.names=c('L3', 'L3_desc', 'L4', 'L4_desc','L5'),
+                      colClasses=c('character','character','character','character','character')) %>% as.data.frame()
+COGpathways <- cog_categories$L4_desc %>% unique()
+pathway_COG <- dlply(kegg_L3 %>% dplyr::select(L4_desc, L3), .(L4_desc))
 
 ## peptide to KEGG database now loaded depending on user's choice in server_analyze.R
 
@@ -80,11 +86,11 @@ sidebar <- dashboardSidebar(
     menuItem("Analysis", tabName = "Analysis", icon = icon("cog")),
     menuItem("Gallery", tabName = "gallery", icon = icon("picture-o")),
     menuItem("About", tabName = "about", icon = icon("question-circle")),
-    menuItem("iMetaLab", icon = icon("home"), 
+    menuItem("iMetaLab", icon = icon("home"),
              href = "http://www.imetalab.ca"),
-    menuItem("pepFunk on GitHub", icon=icon("github"), 
+    menuItem("pepFunk on GitHub", icon=icon("github"),
              href = "https://github.com/northomics/pepFunk")
-    
+
   )
 )
 
@@ -115,14 +121,14 @@ body <- dashboardBody(
                       box(
                         title = "PCA analysis",
                         solidHeader = TRUE,
-                        status = "primary", 
+                        status = "primary",
                         width = 6,
                         img(src='gallery/PCA.png')
                       ),
                       box(
                         title = "Heatmap of enriched functions",
                         solidHeader = TRUE,
-                        status = "primary", 
+                        status = "primary",
                         width = 6,
                         img(src='gallery/Heat.png')
                       )
@@ -132,14 +138,14 @@ body <- dashboardBody(
     tabItem(tabName = "about",
             fluidRow(
               box(
-                title = "About pepFunk, a metaproteomic peptide-centric functional enrichment workflow.", 
+                title = "About pepFunk, a metaproteomic peptide-centric functional enrichment workflow.",
                 solidHeader = TRUE,
-                status = "primary", 
+                status = "primary",
                 width = 12,
                 "Welcome to pepFunk!",
                 br(),
                 "pepFunk allows you to complete a peptide-focused functional enrichment workflow for gut microbiome metaproteomic studies.
-                
+
                 This workflow uses KEGG, COG, or eggNOG annotation for pathway enrichment, alongside Gene Set Variation Analysis (GSVA) adapted for peptide data.
                 By completing analysis on peptides, rather than proteins, we lose less information and retain more statistical power.
                 We curated peptide database specific to human gut microbiome studies for computational speed.
@@ -148,9 +154,9 @@ body <- dashboardBody(
             ),
             fluidRow(
               box(
-                title = "Updates", 
+                title = "Updates",
                 solidHeader = TRUE,
-                status = "primary", 
+                status = "primary",
                 width = 12,
                 "January 22, 2021",
                 br(),
@@ -160,13 +166,13 @@ body <- dashboardBody(
                 "February 22, 2021",
                 br(),
                 "Fixed a bug to allow 10 conditions."
-              
+
               )
-            )   
+            )
     )
   ),
   #Semi-collapsible sidebar
-  tags$script(HTML("$('body').addClass('sidebar-mini');"))             
+  tags$script(HTML("$('body').addClass('sidebar-mini');"))
 )
 
 
