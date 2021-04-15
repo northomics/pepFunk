@@ -185,8 +185,8 @@ fluidPage(
                                            annotated with the eggNOG term.")),
 
                 tags$hr(),
-                uiOutput("gotoanalysisbutton"),
-        
+                uiOutput("gotoanalysisbutton"), ## Code for analysis button, from server_analyze.R/182
+
 
 ) #box close
     ) # column close
