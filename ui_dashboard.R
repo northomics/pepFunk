@@ -87,7 +87,7 @@ fluidPage(
                solidHeader = TRUE,
                collapsible = FALSE,
                # horizontal line
-               rHandsontableOutput('OriData'),
+               rHandsontableOutput('OriData'), ##in server_analyze.R
 
                tags$hr(),
                helpText("Note: you can update your sample names here.
