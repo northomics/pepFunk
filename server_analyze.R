@@ -1,4 +1,4 @@
-#### renderUI 
+#### renderUI
 ## allow additional conditions, for adding and removing...
 #https://www.reddit.com/r/rstats/comments/7n4qnj/shiny_observeevent_on_inserted_ui/
 
@@ -18,7 +18,7 @@ plotheight <- reactive({
 core_pep_kegg <- reactive({
   if (input$databaseChoicekegg == 'curated_kegg'){
     ## Core kegg database
-    core_pep_kegg <- read.delim("./data/core_pep_kegg_db.csv", 
+    core_pep_kegg <- read.delim("./data/core_pep_kegg_db.csv",
                                 sep=",", header=F, col.names = c("pep", "kegg", "count"))
     core_pep_kegg_only <- core_pep_kegg %>% dplyr::group_by(pep) %>% dplyr::select(pep, kegg)
     core_pep_kegg <- core_pep_kegg %>% dplyr::group_by(pep) %>%
@@ -31,7 +31,7 @@ core_pep_kegg <- reactive({
   validate(
     need(inFile != "", "Please upload a properly formatted peptide to KEGG database.")
   )
-  core_pep_kegg <- read.delim(inFile$datapath, 
+  core_pep_kegg <- read.delim(inFile$datapath,
                               sep=",", header=F, col.names = c("pep", "kegg", "count"))
   core_pep_kegg <- core_pep_kegg %>% dplyr::group_by(pep) %>%
     dplyr::summarize(total = sum(count))  %>%
@@ -43,7 +43,7 @@ core_pep_kegg <- reactive({
 })
 
 
-values <- reactiveValues(btn = 0) # want to start the button count at 0 not 1... 
+values <- reactiveValues(btn = 0) # want to start the button count at 0 not 1...
 
 
 observeEvent(input$addcond, {
@@ -58,7 +58,7 @@ observeEvent(input$addcond, {
       )
     )
   )
-  
+
 })
 
 
@@ -74,9 +74,9 @@ observeEvent(input$rmvcond, {
     showNotification(
       "You cannot remove any more conditions.",
       duration = 5,
-      type = "error") 
+      type = "error")
   }
-})  
+})
 
 
 
@@ -99,14 +99,14 @@ get_data <- reactive({
   validate(
     need(inFile != "", "Please upload a file of peptide intensity values.")
   )
-  
+
 
   if (input$file_fmt == "pep"){
-    exp_data <- read.delim(inFile$datapath, row.names = 1) %>% 
+    exp_data <- read.delim(inFile$datapath, row.names = 1) %>%
       as.data.frame() %>% dplyr::select(starts_with('Intensity.'))
     exp_data[exp_data==1] <-NA
   } else {
-    exp_data <- read.delim(inFile$datapath, row.names = 1, sep=',') %>% 
+    exp_data <- read.delim(inFile$datapath, row.names = 1, sep=',') %>%
       as.data.frame()
     exp_data[exp_data==1] <-NA
     values$btn <- 0 #resetting btn
@@ -124,13 +124,13 @@ output$OriData <-renderRHandsontable({
   } else {
     condition_options <- c(input$control, input$othercond, NA)
   }
- 
+
   values$condition_options <- condition_options
   if ((input$format == 'auto' & input$file_fmt == 'pep')| input$sample_data == 'sample'){
     exp_data <- get_data()
     samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
     x <- data.frame(Samples = samplenames)
-    conditions <- purrr::map(condition_options, 
+    conditions <- purrr::map(condition_options,
                              ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
     x <- x %>% mutate(Condition = case_when(!!!conditions))
     rhandsontable(x) %>%
@@ -141,32 +141,32 @@ output$OriData <-renderRHandsontable({
     samplenames <- colnames(exp_data)
 
     x <- data.frame(Samples = samplenames)
-    conditions <- purrr::map(condition_options, 
+    conditions <- purrr::map(condition_options,
                              ~quo(str_detect(samplenames, fixed(!!.x, ignore_case = T))~!!.x))
     x <- x %>% mutate(Condition = case_when(!!!conditions))
     rhandsontable(x) %>%
-      hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition     
+      hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
   } else if (input$format == 'manual' & input$file_fmt == 'pep'){
     exp_data <- get_data()
     samplenames <- colnames(exp_data) %>% substr(., 11, nchar(.))
-    x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep(NA, length(samplenames))), 
+    x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep(NA, length(samplenames))),
                     stringsAsFactors = FALSE)
      rhandsontable(x) %>%
       hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
- 
-    
+
+
       } else if (input$format == 'manual' & input$file_fmt == 'csv'){
   exp_data <- get_data()
   ## should not assume that the columns start with "Intensity."
   samplenames <- colnames(exp_data)
-  
-  x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep(NA, length(samplenames))), 
+
+  x <- data.frame(Samples = as.character(samplenames), Condition = as.character(rep(NA, length(samplenames))),
                   stringsAsFactors = FALSE)
-  
+
   rhandsontable(x) %>%
     hot_col(col = "Condition", type = "dropdown", source = condition_options, strict=T) # must chose a condition
 
-   } 
+   }
 }
 )
 
@@ -183,7 +183,7 @@ output$gotoanalysisbutton <- renderUI({
   if (is.null(get_data())) {
     return()
   }
-  actionButton("gotoanalysis", 
+  actionButton("gotoanalysis",
 icon = icon("arrow-right"),
 label = "Continue to peptide centric analysis!",
 style="float:right; color: #fff;  background-color: #006E90; border-color: #006E90")
@@ -191,17 +191,17 @@ style="float:right; color: #fff;  background-color: #006E90; border-color: #006E
 
 
 get_plotdata <- reactive({
-  
+
   withProgress(message = 'Completing GSVA and data transformation', value = 0, { #want a progress bar
   if (is.null(get_data())) {
     return()
   }
 
-  ## use this for help  
-  #  https://deanattali.com/blog/building-shiny-apps-tutorial/ 
+  ## use this for help
+  #  https://deanattali.com/blog/building-shiny-apps-tutorial/
   core_pep_kegg <- core_pep_kegg()
-  exp_data <- get_data()  
-  
+  exp_data <- get_data()
+
   ## allow users to ignore samples
   new_conditions <- values$data
   if (any(is.na(new_conditions$Condition == T))) { # only subset the dataframe if use input NA
@@ -211,11 +211,11 @@ get_plotdata <- reactive({
 
   if (input$file_fmt == 'pep'){
   removeintensity <- colnames(exp_data) %>% substr(., 11, nchar(.))
-  core_kegg <- exp_data %>% as.data.frame() %>% 
+  core_kegg <- exp_data %>% as.data.frame() %>%
     rownames_to_column(., var='pep') %>%
-    merge(., core_pep_kegg, by='pep', all.x=T) %>% 
+    merge(., core_pep_kegg, by='pep', all.x=T) %>%
     mutate(prop=replace(prop, is.na(prop), 1)) %>%
-    mutate_each(funs(.*prop), starts_with('Intensity')) %>% #multiplies the intensities by the proportion 
+    mutate_each(funs(.*prop), starts_with('Intensity')) %>% #multiplies the intensities by the proportion
     mutate(correct_pep = case_when(is.na(newpep_name) ~ pep,
                                    !is.na(newpep_name) ~ newpep_name)) %>%
     column_to_rownames(., var='correct_pep') %>%
@@ -225,21 +225,21 @@ get_plotdata <- reactive({
   } else if (input$file_fmt == 'csv'){
     original_colnames <- colnames(exp_data)
     colnames(exp_data) <- paste0("Temp.", colnames(exp_data))
-    core_kegg <- exp_data %>% as.data.frame() %>% 
+    core_kegg <- exp_data %>% as.data.frame() %>%
       rownames_to_column(., var='pep') %>%
-      merge(., core_pep_kegg, by='pep', all.x=T) %>% 
+      merge(., core_pep_kegg, by='pep', all.x=T) %>%
       mutate(prop=replace(prop, is.na(prop), 1)) %>%
-      mutate_each(funs(.*prop), starts_with('Temp.')) %>% #multiplies the intensities by the proportion 
+      mutate_each(funs(.*prop), starts_with('Temp.')) %>% #multiplies the intensities by the proportion
       mutate(correct_pep = case_when(is.na(newpep_name) ~ pep,
                                      !is.na(newpep_name) ~ newpep_name)) %>%
       column_to_rownames(., var='correct_pep') %>%
       dplyr::select(starts_with('Temp'))
     colnames(core_kegg) <-  original_colnames
-    
+
   }
-  
+
   new_conditions <- arrange(new_conditions, Condition) # change sample names (and column names) to contain condition
-  new_conditions <- new_conditions %>% mutate(new_name = paste0(Samples, "_", Condition)) 
+  new_conditions <- new_conditions %>% mutate(new_name = paste0(Samples, "_", Condition))
   if (exists("ignore_cols")){
     new_samples <- new_conditions$Samples[-ignore_cols]
     new_names <- new_conditions$new_names[-ignore_cols] # so that you can update column names
@@ -249,13 +249,13 @@ get_plotdata <- reactive({
     new_names <- new_conditions$new_names
     conditions <- new_conditions$Condition
   }
-  
-  
+
+
   cond_opts <- conditions %>% unique()
   cond_count <- table(conditions) %>% as.vector()
 
   core_kegg <- core_kegg %>% select(new_conditions$Samples)
-  
+
   ## THIS ISN'T WORKING, WHY?
   if (input$format == 'manual'){
     colnames(core_kegg) <- new_conditions$new_name
@@ -265,7 +265,7 @@ get_plotdata <- reactive({
   } else if (input$format == 'auto') {
     colnames(core_kegg) <- new_conditions$Samples
   }
-  
+
   # filtering/removing missing data
   core_kegg <- filter_valids(core_kegg,
                              conditions = cond_opts,
@@ -273,12 +273,12 @@ get_plotdata <- reactive({
                              at_least_one = TRUE)  #but if it is consistently identified in a condition, keep it
 
   if (input$sizefact == 'yes'){
-    norm_pep <- estimateSizeFactorsForMatrix(core_kegg) #you can add 1 to all values.. 
+    norm_pep <- estimateSizeFactorsForMatrix(core_kegg) #you can add 1 to all values..
     exp_data <- sweep(as.matrix(core_kegg), 2, norm_pep, "/")
   } else {
       exp_data <- core_kegg
   }
-  
+
   peptides <- rownames(exp_data)
   if (input$normalize == "log10"){
   exp_data <- data.frame(exp_data) %>% #dplyr::select(starts_with('Intensity')) %>%
@@ -291,11 +291,11 @@ get_plotdata <- reactive({
   )
   rownames(exp_data) <- peptides
   # applying function over our pathway list
-  kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg', core_pep_kegg = core_pep_kegg) 
-  
+  kegg_genesets <- lapply(pathway_kegg, match_pathway, annot_type='kegg', core_pep_kegg = core_pep_kegg)
+
   gsva_kegg <- gsva(as.matrix(exp_data),kegg_genesets, min.sz=10,
                     kcdf='Gaussian') ## rnaseq=F because we have continuous data
-  
+
 }) # <- end of withProgress
   list(exp_data = exp_data, gsva_kegg = gsva_kegg, conditions = conditions,
             new_conditions = new_conditions)
@@ -315,7 +315,7 @@ get_plotdata <- reactive({
       return()
     }
   })
-  
+
   output$treatment_gsva <- renderUI({
     ## render options for GSVA
     condition_options <- get_plotdata()[["conditions"]]
@@ -328,7 +328,7 @@ get_plotdata <- reactive({
       return()
     }
   })
-  
+
 
 
 ## for the PCA
@@ -353,7 +353,7 @@ output$colourpickers <- renderUI({
   #colours_to_plot <- viridis_pal(option = "D")(numcond)
   colours_to_plot <- lacroix_palette("Pamplemousse", n = numcond, type = "continuous")
   lapply(seq(numcond), function(i) {
-    colourInput(inputId = paste0("colour", seqcond[i]), 
+    colourInput(inputId = paste0("colour", seqcond[i]),
                 label = condition_label[i],
                 # label = need to figure out
                 value = colours_to_plot[i])
@@ -378,10 +378,10 @@ output$colourpickers2 <- renderUI({
     condition_label <- c(condition_label, additional_label)
   }
   ## how to make a palette..
-  colours_to_plot <- lacroix_palette("Pamplemousse", n = numcond, type = "continuous") 
+  colours_to_plot <- lacroix_palette("Pamplemousse", n = numcond, type = "continuous")
   #colours_to_plot <- viridis_pal(option = "D")(numcond)
   lapply(seq(numcond), function(i) {
-    colourInput(inputId = paste0("colour2_", seqcond[i]), 
+    colourInput(inputId = paste0("colour2_", seqcond[i]),
                 label = condition_label[i],
                 # label = need to figure out
                 value = colours_to_plot[i])
@@ -408,7 +408,7 @@ observeEvent(input$genplotheat,{
   new_conditions <- get_plotdata()[['new_conditions']]
   #new_samples <- new_conditions$Samples
   new_samples <- new_conditions$new_names
-  
+
   withProgress(message = 'Making plot', value = 0, { #want a progress bar
 
   if (input$restrict_analysis == "y" ){ # make design matrix for restricted analysis (pairwise comparisons)
@@ -418,8 +418,8 @@ observeEvent(input$genplotheat,{
     new_conditions <- new_conditions[new_conditions$Condition %in% c(control, treatment),]
     cond <- factor(new_conditions$Condition) %>% relevel(control)
     design <- model.matrix(~ cond)
-    colnames(design)[1] <- c(control) 
-    colnames(design)[2] <- substr(colnames(design)[2], 5, 
+    colnames(design)[1] <- c(control)
+    colnames(design)[2] <- substr(colnames(design)[2], 5,
                                   nchar(colnames(design)[2])) #just removing "cond"
     fit <- lmFit(gsva_kegg[,new_conditions$new_samples], design)
     fit<- eBayes(fit, trend=T)
@@ -430,19 +430,19 @@ observeEvent(input$genplotheat,{
     } else {
     control_cond <- input$control
     }
-   
-    cond <- factor(new_conditions$Condition) %>% relevel(control_cond) 
-    print(cond)  
-    design <- model.matrix(~  cond) 
-    colnames(design)[1] <- c(control_cond) 
-    colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
+
+    cond <- factor(new_conditions$Condition) %>% relevel(control_cond)
+    print(cond)
+    design <- model.matrix(~  cond)
+    colnames(design)[1] <- c(control_cond)
+    colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5,
                                                nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
 
     fit <- lmFit(gsva_kegg, design)
     fit <- eBayes(fit, trend=T)
 
   }
-  
+
   allGeneSets <- topTable(fit, coef=2:ncol(design), number=Inf)
   if (input$plotsig == 'y') {
     pval <- as.numeric(input$pvalthresh)
@@ -453,7 +453,7 @@ observeEvent(input$genplotheat,{
                          p.value=pval, adjust="BH")
   res <- decideTests(fit, p.value=pval, adjust="BH") ## had to meet adjusted pval
   res <- res %>% as.data.frame()
-  
+
   if (ncol(res) > 2) {
     sig_tests <- res[abs(res[,2:ncol(res)]) %>% rowSums(.) > 0,]
   } else {
@@ -461,83 +461,83 @@ observeEvent(input$genplotheat,{
   }
 
 
-  ## Controlling the type of heatmap. 
+  ## Controlling the type of heatmap.
   ## Bubble plot options
   ## input$fig_type == "bubble"
   ## input$fig_type == "heatmap"
-  
- 
+
+
     sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
     ## only looking at significantly altered gene sets.
     if (input$restrict_analysis == "y"){
-      control_cond <- input$control_gsva_select 
+      control_cond <- input$control_gsva_select
     } else if (input$sample_data=="sample"){
       control_cond <- input$control_sample
       } else {
       control_cond <- input$control
     }
-    
+
     if (ncol(sig_tests %>% as.data.frame()) >= 2){
       sigpathways <- sig_tests[abs(sig_tests) %>% rowSums(.) > 0,] %>% as.data.frame() %>%
         rownames_to_column(., var='Pathway') %>% dplyr::select(-control_cond)
     } else {
-      sigpathways <- as.data.frame(sig_tests %>% abs())   
+      sigpathways <- as.data.frame(sig_tests %>% abs())
       sigpathways <- sigpathways[sigpathways > 0,, drop=F] %>% as.data.frame() %>% rownames_to_column(., var='Pathway')
     }
-    
-    
-    if (input$fig_type == "heatmap"){    
+
+
+    if (input$fig_type == "heatmap"){
     gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
       melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'Samples')
-    
+
     ## chosing if we want to plot kegg by p-value or by clustering!
     if (input$kegg_ord == 'clust'){
       kegg_order <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
     } else {
       kegg_order <- allGeneSets[order(-allGeneSets$P.Value),] %>% rownames()
     }
-    
+
     gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = kegg_order)
     # gsvaplot_data <- gsvaplot_data %>% filter(Condition != 'NA')
-    
+
     if (input$sample_ord == 'clust'){
       sample_order <- rownames(sig_gsva %>% t())[hclust(dist(sig_gsva %>% t()))$order]
       gsvaplot_data$variable<- factor(gsvaplot_data$variable, levels = sample_order)
-      values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
+      values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) +
         #facet_grid(~ Condition, switch='x', scales = "free") +
         #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
         scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
-                             space = "Lab", name="GSVA enrichment score") + 
+                             space = "Lab", name="GSVA enrichment score") +
         geom_tile(na.rm = TRUE) +
         xlab(label = "\n\n Sample") +
         ylab(label="") +
         theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
-      
+
     } else {
-      values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) + 
+      values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill = value)) +
         facet_grid(~ Condition, switch='x', scales = "free") +
         #scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
         scale_fill_gradientn(colours=c(input$low_col, "white", input$high_col),
-                             space = "Lab", name="GSVA enrichment score") + 
+                             space = "Lab", name="GSVA enrichment score") +
         geom_tile(na.rm = TRUE) +
         xlab(label = "\n\n Sample") +
         ylab(label="") +
         theme(axis.text.x = element_text(angle = 45, hjust = 1)) #, plot.margin = margin(6,.8,6,.8, "cm"))
-   
+
     }
   } else if (input$fig_type == "bubble"){
 ## bubble heatmap prints, but is not right somewhere...colours change depending on plot type. could be an issue with plotly and fill
   wantedRows <- data.frame(Pathway = rownames(DEgeneSets), pvals = DEgeneSets$adj.P.Val)
-  
+
   #gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
-  #    melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'Samples')  
+  #    melt(., id='Pathway') %>% merge(., new_conditions, by.x='variable', by.y = 'Samples')
   sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
   sig_gsva_plotting <- merge(sig_gsva, wantedRows, by.x=0, by.y="Pathway")
-  
-  
+
+
   gsvaplot_data <- data.frame(sig_gsva_plotting) %>% dplyr::rename(Pathway = Row.names) %>%
     melt(., id=c('Pathway', 'pvals')) %>% merge(., new_conditions, by.x='variable', by.y = 'Samples')
- 
+
   #gsvaplot_data$condition <- substr(gsvaplot_data$variable, 1, nchar(as.character(gsvaplot_data$variable))-1)
   if (input$kegg_ord == 'clust') {
     clusterdata <- rownames(sig_gsva)[hclust(dist(sig_gsva))$order]
@@ -550,31 +550,31 @@ observeEvent(input$genplotheat,{
   values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill=value)) +
       #facet_grid(~ Condition, switch = "x", scales = "free_x", space = "free_x") +
     scale_fill_gradientn(colours=c(input$low_col, input$low_col, "white", input$high_col, input$high_col),
-                         space = "Lab", name="GSVA enrichment score") + 
+                         space = "Lab", name="GSVA enrichment score") +
       geom_point(na.rm = TRUE, shape=21, colour="darkgrey",  aes(size = abs(value))) +
       xlab(label = "Sample") +
       ylab(label="") +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  
+
   } else {
     values$plotheat <- ggplot(data = gsvaplot_data, mapping = aes(x = variable, y = Pathway, fill=value)) +
       facet_grid(~ Condition, switch = "x", scales = "free_x", space = "free_x") +
       scale_fill_gradientn(colours=c(input$low_col, input$low_col, "white", input$high_col, input$high_col),
-                             space = "Lab", name="GSVA enrichment score") + 
+                             space = "Lab", name="GSVA enrichment score") +
       geom_point(na.rm = TRUE, shape=21,colour="darkgrey",  aes(size = abs(value))) +
       xlab(label = "Sample") +
       ylab(label="") +
       theme_bw() +
       theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
       guides(size=guide_legend(title="Absolute GSVA enrichment score")# +
-    
-    ) 
+
+    )
   }
   }
-  
+
       }) ## <- this is end of withProgress
-    }) 
+    })
 
 
 observeEvent(input$genplotpca, {
@@ -598,17 +598,17 @@ observeEvent(input$genplotpca, {
   xaxis <- input$x_axisPC
   yperc <- paste0("(", round(PoV[yaxis %>% as.numeric()] ,2), "%)")
   xperc <- paste0("(", round(PoV[xaxis %>% as.numeric()] ,2), "%)")
-  
+
   yaxislabel <- paste0("PC", yaxis, " ", yperc)
   xaxislabel <- paste0("PC", xaxis, " ", xperc)
-  
+
   ## colours are stored under input$colours1 : input$coloursn where n is values$btn + 2
-  new_conditions <- values$data # get reactive 
+  new_conditions <- values$data # get reactive
    num_of_cond <- new_conditions$Condition %>% unique() %>% length()
-   #plotcolours <- paste0("input$colour", 1:(values$btn+2)) 
-   plotcolours <- paste0("input$colour", 1:num_of_cond) 
+   #plotcolours <- paste0("input$colour", 1:(values$btn+2))
+   plotcolours <- paste0("input$colour", 1:num_of_cond)
     ## to change the character vector into object names
-  plotcolours <- unlist(lapply(plotcolours,function(s) eval(parse(text=s)))) 
+  plotcolours <- unlist(lapply(plotcolours,function(s) eval(parse(text=s))))
   ## prefer to use shapes that can be filled in...
 #  if (values$btn < 4) {
    if (num_of_cond < 4) {
@@ -621,9 +621,9 @@ observeEvent(input$genplotpca, {
    #print(values$btn)
   #print(plotcolours)
   #print(shapes2use)
-    
+
     values$plotpca <- ggplot(coords, aes_string(x = paste0('PC', xaxis), y = paste0('PC', yaxis))) + #accept selectInput to choose axes!
-    geom_point(size=3, aes_string(fill="condition", shape="condition")) + 
+    geom_point(size=3, aes_string(fill="condition", shape="condition")) +
     stat_ellipse(geom = "polygon", alpha=.2, aes_string(color="condition", fill="condition")) +
     #scale_color_manual(values=c(input$control_col, input$cond1_col, input$cond2_col)) + #pick colours for colour picker
     scale_color_manual(values=plotcolours) +
@@ -632,12 +632,12 @@ observeEvent(input$genplotpca, {
     scale_shape_manual(values=shapes2use) +
     scale_x_continuous(name=xaxislabel) + # labels depend on selected PCs
     scale_y_continuous(name=yaxislabel) +
-    theme(legend.position = "bottom", legend.title = element_blank()) 
-  
-}) 
+    theme(legend.position = "bottom", legend.title = element_blank())
+
+})
 
 observeEvent(input$genclustdendro, {
-  new_conditions <- values$data # get reactive 
+  new_conditions <- values$data # get reactive
   if (input$sample_data == 'sample') {
     condition_options <-  c(input$control_sample, input$othercond_sample, input$finalcond_sample)
     values$btn <- 1
@@ -652,13 +652,13 @@ observeEvent(input$genclustdendro, {
   }
  print(condition_options)
    ## colours are stored under input$colours1 : input$coloursn where n is values$btn + 2
-#plotcolours <- paste0("input$colour2_", 1:(values$btn+2)) 
-  new_conditions <- values$data # get reactive 
+#plotcolours <- paste0("input$colour2_", 1:(values$btn+2))
+  new_conditions <- values$data # get reactive
   num_of_cond <- new_conditions$Condition %>% unique() %>% length()
-  #plotcolours <- paste0("input$colour", 1:(values$btn+2)) 
-  plotcolours <- paste0("input$colour", 1:num_of_cond) 
+  #plotcolours <- paste0("input$colour", 1:(values$btn+2))
+  plotcolours <- paste0("input$colour", 1:num_of_cond)
    ## to change the character vector into object names
-  plotcolours <- unlist(lapply(plotcolours,function(s) eval(parse(text=s)))) 
+  plotcolours <- unlist(lapply(plotcolours,function(s) eval(parse(text=s))))
   log_exp <- get_plotdata()[['exp_data']]
   dist_method <- input$dist_method
   hclust_method <- input$hclust_method
@@ -668,18 +668,18 @@ observeEvent(input$genclustdendro, {
   new_samples <- new_conditions$Samples
   condcolours <- data.frame(Condition = condition_options, Colour = plotcolours)
   condcolours <- merge(new_conditions, condcolours, by = "Condition")
-  dend <- log_exp %>% t() %>% dist(method = dist_method) %>% 
+  dend <- log_exp %>% t() %>% dist(method = dist_method) %>%
     hclust(method = hclust_method) %>% as.dendrogram(hang=0.1) %>%
-    set("leaves_pch", 19) %>% 
+    set("leaves_pch", 19) %>%
     set("leaves_col", as.character(condcolours$Colour), order_value = T) %>%
     set('branches_lwd', 0.6) %>%
     set('labels_cex', 1)
-  dend <- as.ggdend(dend, horiz=T)  
+  dend <- as.ggdend(dend, horiz=T)
   values$dendro <- ggplot(dend,theme = theme_dendro(), offset_labels = -20) + coord_flip() +
     theme(legend.position="none")
-}) 
+})
 
-## plotting 
+## plotting
 output$clustDendro <- renderPlotly({
   validate(
     need(input$genclustdendro, "Please push button to cluster samples and plot or update dendrogram.")
@@ -693,7 +693,7 @@ output$heatmapUI <- renderUI({
     validate(
       need(input$genplotheat, "Please push button to start analysis and generate/update heatmap.")
     )
-  
+
     values$plotheat})
    plotOutput("heatmapPlot", height = input$plotheight, width=input$plotwidth)
 })
@@ -704,15 +704,15 @@ output$pcaPlot <- renderPlotly({
   validate(
     need(input$genplotpca, "Please push button to start analysis and generate or update PCA biplot.")
   )
-  
-  ggplotly(values$plotpca) 
+
+  ggplotly(values$plotpca)
   })
 
 ## organizing plot download handlers
 output$downloadPlot <- downloadHandler(
   filename = function(){
     paste('heatmapPlot','.pdf',sep='')
-  }, 
+  },
   content = function(file){
     ggsave(file,plot=values$plotheat, height=input$plotheightsave, width=input$plotwidthsave, units="in")
   }
@@ -722,7 +722,7 @@ output$downloadPlot <- downloadHandler(
 output$dlPCA <- downloadHandler(
   filename = function(){
     paste0('pcaPlot','.png',sep='')
-  }, 
+  },
   content = function(file){
     ggsave(file,plot=values$plotpca)
   })
@@ -740,4 +740,12 @@ output$downloadKEGG <- downloadHandler(
   content = function(file){
     #core_pep_kegg <- core_pep_kegg()
     write.table(core_pep_kegg(), file, row.names = F, quote = F)}
+    )
+
+output$downloadGSVA <- downloadHandler(
+      filename = "gsva_kegg_scores.txt",
+      content = function(file){
+        #core_pep_kegg <- core_pep_kegg()
+        write.table(get_plotdata()[["conditions"]], file, row.names = F, quote = F)}
+
 )

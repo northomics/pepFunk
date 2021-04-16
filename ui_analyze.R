@@ -1,4 +1,4 @@
-## Test test 
+## Test test
 tabBox(
   width = 12,
   tabPanel("PCA",
@@ -13,7 +13,7 @@ tabBox(
                           actionButton('genplotpca', 'Generate plot or update plot', icon("chart-bar"),
                                        style="color: #fff; background-color: #006E90; border-color: #006E90"), #337ab7
                           tags$hr(),
-                          
+
                           uiOutput("colourpickers"),
                           tags$hr(),
                           downloadButton('dlPCA', 'Download PCA biplot',
@@ -24,7 +24,7 @@ tabBox(
              )
 )
   ),
-  
+
   tabPanel("Sample clustering",
            sidebarLayout(
              sidebarPanel(width = 3,
@@ -52,20 +52,20 @@ tabBox(
                           downloadButton('dlDendro', 'Download cluster dendrogram',
                                          style="color: #fff; background-color: #006E90; border-color: #006E90")
                           ),
-             
+
              mainPanel(
-              plotlyOutput("clustDendro") 
+              plotlyOutput("clustDendro")
              #plotOutput("clustDendro", height = 900, width = 800)
                )
            )
-           
-  ),      
-  
+
+  ),
+
   tabPanel("Functional enrichment heatmap",
            sidebarLayout(
              sidebarPanel(width = 3,
                           radioButtons("restrict_analysis", "Restrict analysis to compare two conditions?",
-                                       c("Yes" = "y", 
+                                       c("Yes" = "y",
                                          "No" = "n"),
                                        selected = "n"),
                           uiOutput("control_gsva"),
@@ -99,24 +99,27 @@ tabBox(
 #                          )
 ,
 
-                          
+
                           tags$hr(),
                           downloadButton('downloadPlot','Download heatmap',
                                          style="color: #fff; background-color: #006E90; border-color: #006E90"),
                           tags$hr(),
                           downloadButton('downloadKEGG', 'Download peptide annotation',
+                                         style="color: #fff; background-color: #006E90; border-color: #006E90"),
+                          tags$hr(),
+                          downloadButton('downloadGSVA', 'Download GSVA ',
                                          style="color: #fff; background-color: #006E90; border-color: #006E90")
              ),
              mainPanel(
-               
-              
-               
+
+
+
                fluidRow(
                  tabBox(
                    title = tagList(shiny::icon("gear"), "Plot dimension settings"), width = 8,
-                   tabPanel("In app visualization", 
+                   tabPanel("In app visualization",
                             sliderInput("plotheight", "Plot height (pixels):",
-                             min = 100, max = 1000, value = 500),
+                             min = 100, max = 2000, value = 500),
                             sliderInput("plotwidth", "Plot width (pixels):",
                             min = 100, max = 1000, value = 700)
                     ),
@@ -127,7 +130,7 @@ tabBox(
                                       min = 1, max = 20, value = 11)
                             )
                  )
-                 
+
                ),
                fluidRow(
                  box(width=12,
