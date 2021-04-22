@@ -1,0 +1,172 @@
+---
+title: "pepFunk"
+author: "Caitlin Simopoulos"
+date: "21/04/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,warning = FALSE, message = FALSE, cache = FALSE)
+library(plyr)
+library(tidyverse)
+library(DESeq2)
+library(GSVA)
+library(limma)
+library(reshape2)
+library(matrixStats)
+
+## load L3 KEGG information
+kegg_L3 <- read.delim("./database/kegg_L3.txt", sep='\t', header=F, 
+                      col.names=c('L3', 'L3_desc', 'L4', 'L4_desc'),
+                      colClasses=c('character','character','character','character')) %>% as.data.frame()
+pathways <- kegg_L3$L4_desc %>% unique() 
+pathway_kegg <- dlply(kegg_L3 %>% dplyr::select(L4_desc, L3), .(L4_desc))
+
+#load core peptide db
+core_pep_kegg <- read.delim2("./database/core_pep_kegg_db.csv", 
+                             sep=",", header=F, col.names = c("pep", "kegg", "count", "eval"))
+## get information on the number of proteins for a peptide...
+core_pep_kegg_extrainfo <- core_pep_kegg %>% dplyr::group_by(pep) %>% 
+  dplyr::summarize(total = sum(count))  %>%
+  merge(., core_pep_kegg, by='pep', all.y=T) %>%
+  dplyr::mutate(prop = count/total) 
+
+core_pep_kegg <- core_pep_kegg %>% dplyr::group_by(pep) %>% 
+  dplyr::summarize(total = sum(count))  %>%
+  merge(., core_pep_kegg, by='pep', all.y=T) %>%
+  dplyr::mutate(prop = count/total) %>% dplyr::select(pep, kegg, prop)
+
+## update pep if it is a duplicate...
+core_pep_kegg$newpep_name <- make.names(core_pep_kegg$pep,unique=T)
+```
+
+```{r functions}
+filter_valids = function(df, conditions, min_count, at_least_one = TRUE) {
+  # df = data frame containing LOG2 data for filtering and organized by data type
+  # conditions = a character vector dictating the grouping
+  # min_count = a numeric vector of the same length as "conditions" indicating the minimum 
+  #     number of valid values for each condition for retention
+  # at_least_one = TRUE means to keep the row if min_count is met for at least one condition
+  #     FALSE means min_count must be met across all conditions for retention
+  df[df==0] <- NA
+  all_names <- colnames(df) 
+  cond.names = lapply(conditions, # Group column names by conditions
+                      function(x) grep(x, all_names, value = TRUE, perl = TRUE))
+  cond.filter = sapply(1:length(cond.names), function(i) {
+    df2 = df[cond.names[[i]]]   # Extract columns of interest
+    df2 = as.matrix(df2)   # Cast as matrix for the following command
+    sums = rowSums(is.finite(df2)) # count the number of valid values for each condition
+    sums >= min_count[i]   # Calculates whether min_count requirement is met
+  })
+  if (at_least_one) {
+    df$KEEP = apply(cond.filter, 1, any)
+  } else {
+    df$KEEP = apply(cond.filter, 1, all)
+  }
+  #return(df) # No rows are omitted, filter rules are listed in the KEEP column
+  df[is.na(df)] <- 0
+  return(df %>%  rownames_to_column(., var='peptides') %>% filter(KEEP) %>% dplyr::select(-KEEP) %>%
+         column_to_rownames(., var='peptides'))  # only keeping rows that meet the criteria!
+}
+
+### Have to move to using `across()` instead of mutate_at() or mutate_each()....
+## tips found at http://www.rebeccabarter.com/blog/2020-07-09-across/
+expression_data <- function(annotationtype){
+  if (annotationtype=='COG'){
+   exp_data <- matched_core_cog %>% dplyr::select(starts_with("Intensity.")) %>%
+      rownames_to_column(., var='peptide') %>% 
+      mutate_each(., funs(log2(1 + .)), starts_with("Intensity.")) %>% ##should be log10 data...
+      column_to_rownames(., var='peptide') 
+  return(exp_data)
+    } else if (annotationtype=='kegg'){
+    exp_data <- matched_core_kegg %>% dplyr::select(starts_with("Intensity.")) %>%
+      rownames_to_column(., var='peptide') %>% 
+      mutate(across(starts_with("Intensity."), ~{log2(1+.x)})) %>% ##should be log10 data...
+      column_to_rownames(., var='peptide')
+  return(exp_data)    
+  } else {
+    stop("Not an accepted functional annotation type.")
+  }}
+
+match_pathway_kegg <- function(df){
+  subset <- core_pep_kegg[core_pep_kegg$kegg %in% df$L3,]
+  subset <- subset$newpep_name
+  return(subset)
+} 
+match_pathway_cog <- function(df){
+  subset <- core_pep_cog[core_pep_cog$cog %in% df$cog,]
+  subset <- subset$newpep_name
+  return(subset)
+} 
+```
+
+```{r loadpeptides}
+peptide_file <- "peptides.txt"
+metadata_file <- "metadata.csv"
+peptides  <- read.delim(peptide_file, row.names = 1) %>% as.data.frame() %>% 
+  select(starts_with("Intensity."))
+metadata <- read.delim(metadata_file, header=F, sep=",")
+```
+
+
+```{r filteringpeptides}
+# Maintaining metadata is output from MetaLab
+# 1st columns as sample name, 2nd column as experiment name, 3rd column and after as grouping
+cond_options <- table(metadata[,3]) %>% as.data.frame()
+
+## filtering for Q50 
+cond_opts <- cond_options$Var1
+cond_count <- cond_options$Freq * 0.5
+
+exp_data <- filter_valids(peptides,
+                     conditions = cond_opts,
+                     min_count = cond_count,
+                     at_least_one = T)  
+```
+
+```{r logandnormalize}
+norm_pep <- estimateSizeFactorsForMatrix(exp_data) 
+norm_exp <- sweep(as.matrix(exp_data), 2, norm_pep, "/")
+log_data <- data.frame(norm_exp) %>% #dplyr::select(starts_with('Intensity')) %>%
+  mutate_all(., funs(log2(1 + .)))
+```
+
+```{r matchcore}
+## intensities normalized by the proportion of functional annotation
+## if there are more than one functional annotation, the peptide will have a suffix added to the end (i.e. .1, .2, .3...etc)
+## $newpep_name
+
+matched_core_kegg <- data.frame(norm_exp) %>% 
+  rownames_to_column(., var='pep') %>%
+  merge(., core_pep_kegg, by='pep') %>% 
+  dplyr::mutate(prop=replace(prop, is.na(prop), 1)) %>%
+  dplyr::mutate(across(starts_with("Intensity."), ~{.x*prop})) %>% #update after mutate_at was depreciated
+  #mutate_at(funs(.*prop), starts_with("Intensity.")) %>% #multiplies the intensities by the proportion
+  column_to_rownames(., var='newpep_name') %>%
+  dplyr::select(starts_with("Intensity."))
+
+
+## need to add COG matches when Isaac is done
+exp_data_kegg <- expression_data('kegg')
+# removing "Intensity."
+colnames(exp_data_kegg) <- colnames(exp_data_kegg) %>% substr(., 11, nchar(.))
+```
+
+```{r matchpathway}
+# applying function over our pathway list
+# get custom peptide sets for this particular dataset 
+KEGG_pepsets <- lapply(pathway_kegg, match_pathway_kegg) 
+## when COG is ready
+#COG_genesets <- lapply(pathway_cog, match_pathway_cog) 
+```
+
+```{r gsva}
+gsva_kegg <- gsva(as.matrix(exp_data_kegg),KEGG_pepsets, min.sz=10,
+                  kcdf='Gaussian') ## rnaseq=F because we have continuous data
+
+num_peptidesets <- nrow(gsva_kegg)
+gsva_tofile <- gsva_kegg %>% as.data.frame %>% rownames_to_column("Pathways")
+```
+
+`r print(num_peptidesets)` KEGG pathway peptide sets were identifed in your data.
+
