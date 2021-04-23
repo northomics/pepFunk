@@ -745,7 +745,6 @@ output$downloadKEGG <- downloadHandler(
 output$downloadGSVA <- downloadHandler(
       filename = "gsva_kegg_scores.txt",
       content = function(file){
-        #core_pep_kegg <- core_pep_kegg()
-        write.table(get_plotdata()[["conditions"]], file, row.names = F, quote = F)}
+        write.table(get_plotdata()[['gsva_kegg']], file, row.names = T, quote = F)}
 
 )
