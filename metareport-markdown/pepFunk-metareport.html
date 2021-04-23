@@ -168,14 +168,21 @@ pre code {
 
 <h1 class="title toc-ignore">Quick pepFunk report</h1>
 <h4 class="author">Suggestions to <a href="mailto:imetalabca@gmail.com" class="email">imetalabca@gmail.com</a></h4>
-<h4 class="date">Report generated <span class="citation">@2021-04-22</span> 16:20:53</h4>
+<h4 class="date">Report generated <span class="citation">@2021-04-23</span> 11:50:55</h4>
 
 </div>
 
 
-<div id="intro" class="section level1">
-<h1>Intro</h1>
-<p>This report is based on peptide-centric functional enrichment information as identified by pepFunk. Currently, pepFunk is specific to the human gut microbiome because it uses a curated peptide database. As such, these enrichment results will only be accurate from human gut microbiome data. <em>If you’d like to use your own peptide-centric functional database, please see the <a href="https://shiny2.imetalab.ca/shiny/rstudio/pepFunk/">Shiny app</a></em>.</p>
+<div id="introduction-to-peptide-centric-data-analysis" class="section level1">
+<h1>Introduction to peptide-centric data analysis</h1>
+<p>This report is completely based on <strong>peptide</strong> intensity values. The functional enrichment information is also peptide-centric as identified by pepFunk.</p>
+<p><strong>To note</strong>: Currently, functional enrichment by pepFunk is specific to the <strong>human gut microbiome</strong> because it uses a curated peptide database. PCA and hierarchical clustering uses all identified peptides and is appropriate for any sample type. However, the enrichment results will only be accurate from human gut microbiome data. <em>If you’d like to use pepFunk for another system with your own peptide-centric functional database, please see the <a href="https://shiny2.imetalab.ca/shiny/rstudio/pepFunk/">Shiny app</a></em>.</p>
+<p>In this report you will find:</p>
+<ul>
+<li>A principal component analysis (PCA) biplot visualizing PC1 and PC2, the two components that explain the most variation in your dataset.</li>
+<li>A hierarchical clustering dendrogram visualizing the relationships between samples as explained by peptide intensity similarity.</li>
+<li>Various pepFunk heatmaps describing the molecular functional profiles of your human gut microbiome sample.</li>
+</ul>
 <div id="kegg-pathways" class="section level2">
 <h2>KEGG pathways</h2>
 <p>There were <strong>90 KEGG pathway peptide sets</strong> identified in your data (with a minimum of 10 peptides per set).</p>

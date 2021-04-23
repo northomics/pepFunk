@@ -15,6 +15,7 @@ library(limma)
 library(reshape2)
 library(matrixStats)
 library(kableExtra)
+library(LaCroixColoR) #devtools::install_github("johannesbjork/LaCroixColoR")
 
 ## load L3 KEGG information
 kegg_L3 <- read.delim("./database/kegg_L3.txt", sep='\t', header=F, 
@@ -169,10 +170,58 @@ num_peptidesets <- nrow(gsva_kegg)
 #gsva_tofile <- gsva_kegg %>% as.data.frame %>% rownames_to_column("Pathways")
 ```
 
-# Intro
+# Introduction to peptide-centric data analysis
 
-This report is based on peptide-centric functional enrichment information as identified by pepFunk. Currently, pepFunk is specific to the human gut microbiome because it uses a curated peptide database. As such, these enrichment results will only be accurate from human gut microbiome data. *If you'd like to use your own peptide-centric functional database, please see the [Shiny app](https://shiny2.imetalab.ca/shiny/rstudio/pepFunk/)*.
+This report is completely based on **peptide** intensity values. The functional enrichment information is also peptide-centric as identified by pepFunk. 
 
+**To note**: Currently, functional enrichment by pepFunk is specific to the **human gut microbiome** because it uses a curated peptide database. PCA and hierarchical clustering uses all identified peptides and is appropriate for any sample type.  However, the enrichment results will only be accurate from human gut microbiome data. *If you'd like to use pepFunk for another system with your own peptide-centric functional database, please see the [Shiny app](https://shiny2.imetalab.ca/shiny/rstudio/pepFunk/)*. 
+
+In this report you will find:
+
+* A principal component analysis (PCA) biplot visualizing PC1 and PC2, the two components that explain the most variation in your dataset. 
+* A hierarchical clustering dendrogram visualizing the relationships between samples as explained by peptide intensity similarity. 
+* Various pepFunk heatmaps describing the molecular functional profiles of your human gut microbiome sample. 
+
+# Principal Component Analysis (PCA)
+
+PCA is a data exploration technique that can be used for quality control and pattern discovery.
+
+```{r pca}
+numcond <- length(cond_opts)
+seqcond <- 1:numcond
+colours_to_plot <- lacroix_palette("Pamplemousse", n = numcond, type = "continuous")
+
+colnames(metadata) <- c("Samples", "Experiment", "Condition")
+conditions <- metadata$Condition
+
+pca<- prcomp(t(log_data), center=T, scale=F)
+sampleVals<-data.frame(pca$x)
+exprVals<-data.frame(pca$rotation)
+PoV <- (pca$sdev^2/sum(pca$sdev^2))*100
+
+
+coords<-data.frame(sampleVals, Condition = conditions,
+                   samplename = rownames(sampleVals))
+numPCs <- 1:length(PoV)
+
+for (i in 1:length(PoV)) {
+  percent <- paste0("(", round(PoV[i],2), "%)")
+  name <- paste0("PC", i, "per")
+  assign(name, percent)
+}
+
+(pcaplot <- ggplot(coords, aes(x = PC1, y = PC2)) + #accept selectInput to choose axes!
+    stat_ellipse(geom = "polygon", alpha=.2, aes(color=Condition, fill=Condition)) +
+    geom_point(size=5, aes(colour=Condition, shape=Condition)) + 
+    scale_color_manual(values=c(colours_to_plot)) +
+    scale_fill_manual(values=c(colours_to_plot)) +
+    #scale_shape_manual(values=c(22, 21, 24) )+ #24 after
+    #scale_shape_manual(values=shapes2use) +
+    scale_x_continuous(name= paste0("PC1", " ", PC1per))+ # labels depend on selected PCs
+    scale_y_continuous(name= paste0("PC2", " ", PC2per))+ theme_bw() +
+    theme(legend.position = "bottom", legend.title = element_blank(), text=element_text(size=18)) )
+
+```
 ## KEGG pathways
 
 ```{r depathways, include=T}
@@ -180,7 +229,7 @@ This report is based on peptide-centric functional enrichment information as ide
 control_condition <- "DMSO"
 lowcond <- "Low"
 
-colnames(metadata) <- c("Samples", "Experiment", "Condition")
+
 cond<- factor(metadata$Condition) %>% relevel(. , ref=control_condition) # DMSO is the control
 design <- model.matrix(~  cond) # you can also add other things here...
 colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
