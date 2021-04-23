@@ -16,6 +16,7 @@ library(reshape2)
 library(matrixStats)
 library(kableExtra)
 library(LaCroixColoR) #devtools::install_github("johannesbjork/LaCroixColoR")
+library(dendextend)
 
 ## load L3 KEGG information
 kegg_L3 <- read.delim("./database/kegg_L3.txt", sep='\t', header=F, 
@@ -186,7 +187,7 @@ In this report you will find:
 
 PCA is a data exploration technique that can be used for quality control and pattern discovery.
 
-```{r pca}
+```{r pcasetup}
 numcond <- length(cond_opts)
 seqcond <- 1:numcond
 colours_to_plot <- lacroix_palette("Pamplemousse", n = numcond, type = "continuous")
@@ -206,22 +207,58 @@ numPCs <- 1:length(PoV)
 
 for (i in 1:length(PoV)) {
   percent <- paste0("(", round(PoV[i],2), "%)")
+  percentNoBrack <- paste0(round(PoV[i],2), "%")
   name <- paste0("PC", i, "per")
+  name2 <- paste0("PC",i,"per_short")
   assign(name, percent)
+  assign(name2, percentNoBrack)
 }
+```
 
-(pcaplot <- ggplot(coords, aes(x = PC1, y = PC2)) + #accept selectInput to choose axes!
+In this case, our report visualizes PC1 vs PC2. These are the two components that explain the most variation in this dataset (`r PC1per_short` and `r PC2per_short` respectively).
+
+```{r pcaplot}
+(pcaplot <- ggplot(coords, aes(x = PC1, y = PC2)) +
     stat_ellipse(geom = "polygon", alpha=.2, aes(color=Condition, fill=Condition)) +
     geom_point(size=5, aes(colour=Condition, shape=Condition)) + 
     scale_color_manual(values=c(colours_to_plot)) +
     scale_fill_manual(values=c(colours_to_plot)) +
-    #scale_shape_manual(values=c(22, 21, 24) )+ #24 after
-    #scale_shape_manual(values=shapes2use) +
     scale_x_continuous(name= paste0("PC1", " ", PC1per))+ # labels depend on selected PCs
     scale_y_continuous(name= paste0("PC2", " ", PC2per))+ theme_bw() +
-    theme(legend.position = "bottom", legend.title = element_blank(), text=element_text(size=18)) )
+    theme(legend.position = "bottom", legend.title = element_blank(), text=element_text(size=12)) )
 
 ```
+
+# Hierachical clustering
+
+Hierarchical clustering can also be used to visualize sample similarities.
+
+In this default plot we are using `euclidian` distance and the `complete` agglomeration hierachical clustering method.
+
+```{r hclust}
+
+dd <- dist(log_data %>% t(), method = "euclidian") # be able to chose distance
+hc <- hclust(dd, method = "complete") # be able to chose method
+condcolours <- data.frame(Condition = cond_opts, Colour = as.character(colours_to_plot))
+condcolours <- merge(metadata, condcolours, by = "Condition")
+
+colnames(log_data) <- colnames(log_data) %>% substr(., 11, nchar(.))
+dend <- log_data %>% t() %>% dist(method = "euclidian") %>% 
+  hclust(method = "complete") %>% as.dendrogram(hang=0.1) %>%
+  set("leaves_pch", 19) %>% 
+  set("leaves_col", as.character(condcolours$Colour), order_value = T) %>%
+  set('branches_lwd', 0.7) %>%
+  set('labels_cex', 0.7)
+
+#plot(dend)
+dend_ggplot <- as.ggdend(dend)
+ggplot(dend_ggplot, horiz=T, theme=theme_dendro(),  offset_labels = -10)
+
+```
+
+
+# Functional enrichment analysis
+
 ## KEGG pathways
 
 ```{r depathways, include=T}
