@@ -41,7 +41,7 @@ source("peptide_centric_module.R")
 ########
 
 ## Full KEGG pathways database
-kegg_L3 <- read.delim("./data/kegg.L3.categories.tsv", sep='\t', header=F,
+kegg_L3 <- read.delim("./data/kegg_L3.tsv", sep='\t', header=F,
                       col.names=c('L3', 'L3_desc', 'L4', 'L4_desc'),
                       colClasses=c('character','character','character','character')) %>% as.data.frame()
 KOpathways <- kegg_L3$L4_desc %>% unique()
