@@ -1,0 +1,354 @@
+---
+title: "Quick pepFunk report"
+author: Suggestions to imetalabca@gmail.com
+date: Report generated @`r Sys.time()`
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,warning = FALSE, message = FALSE, cache = FALSE)
+library(plyr)
+library(tidyverse)
+library(DESeq2)
+library(GSVA)
+library(limma)
+library(reshape2)
+library(matrixStats)
+library(kableExtra)
+library(LaCroixColoR) #devtools::install_github("johannesbjork/LaCroixColoR")
+library(dendextend)
+
+## load L3 KEGG information
+kegg_L3 <- read.delim("./database/kegg_L3.txt", sep='\t', header=F, 
+                      col.names=c('L3', 'L3_desc', 'L4', 'L4_desc'),
+                      colClasses=c('character','character','character','character')) %>% as.data.frame()
+pathways <- kegg_L3$L4_desc %>% unique() 
+pathway_kegg <- dlply(kegg_L3 %>% dplyr::select(L4_desc, L3), .(L4_desc))
+
+#load core peptide db
+core_pep_kegg <- read.delim2("./database/core_pep_kegg_db.csv", 
+                             sep=",", header=F, col.names = c("pep", "kegg", "count", "eval"))
+## get information on the number of proteins for a peptide...
+core_pep_kegg_extrainfo <- core_pep_kegg %>% dplyr::group_by(pep) %>% 
+  dplyr::summarize(total = sum(count))  %>%
+  merge(., core_pep_kegg, by='pep', all.y=T) %>%
+  dplyr::mutate(prop = count/total) 
+
+core_pep_kegg <- core_pep_kegg %>% dplyr::group_by(pep) %>% 
+  dplyr::summarize(total = sum(count))  %>%
+  merge(., core_pep_kegg, by='pep', all.y=T) %>%
+  dplyr::mutate(prop = count/total) %>% dplyr::select(pep, kegg, prop)
+
+## update pep if it is a duplicate...
+core_pep_kegg$newpep_name <- make.names(core_pep_kegg$pep,unique=T)
+```
+
+```{r functions}
+filter_valids = function(df, conditions, min_count, at_least_one = TRUE) {
+  # df = data frame containing LOG2 data for filtering and organized by data type
+  # conditions = a character vector dictating the grouping
+  # min_count = a numeric vector of the same length as "conditions" indicating the minimum 
+  #     number of valid values for each condition for retention
+  # at_least_one = TRUE means to keep the row if min_count is met for at least one condition
+  #     FALSE means min_count must be met across all conditions for retention
+  df[df==0] <- NA
+  all_names <- colnames(df) 
+  cond.names = lapply(conditions, # Group column names by conditions
+                      function(x) grep(x, all_names, value = TRUE, perl = TRUE))
+  cond.filter = sapply(1:length(cond.names), function(i) {
+    df2 = df[cond.names[[i]]]   # Extract columns of interest
+    df2 = as.matrix(df2)   # Cast as matrix for the following command
+    sums = rowSums(is.finite(df2)) # count the number of valid values for each condition
+    sums >= min_count[i]   # Calculates whether min_count requirement is met
+  })
+  if (at_least_one) {
+    df$KEEP = apply(cond.filter, 1, any)
+  } else {
+    df$KEEP = apply(cond.filter, 1, all)
+  }
+  #return(df) # No rows are omitted, filter rules are listed in the KEEP column
+  df[is.na(df)] <- 0
+  return(df %>%  rownames_to_column(., var='peptides') %>% filter(KEEP) %>% dplyr::select(-KEEP) %>%
+         column_to_rownames(., var='peptides'))  # only keeping rows that meet the criteria!
+}
+
+### Have to move to using `across()` instead of mutate_at() or mutate_each()....
+## tips found at http://www.rebeccabarter.com/blog/2020-07-09-across/
+expression_data <- function(annotationtype){
+  if (annotationtype=='COG'){
+   exp_data <- matched_core_cog %>% dplyr::select(starts_with("Intensity.")) %>%
+      rownames_to_column(., var='peptide') %>% 
+      mutate_each(., funs(log2(1 + .)), starts_with("Intensity.")) %>% ##should be log10 data...
+      column_to_rownames(., var='peptide') 
+  return(exp_data)
+    } else if (annotationtype=='kegg'){
+    exp_data <- matched_core_kegg %>% dplyr::select(starts_with("Intensity.")) %>%
+      rownames_to_column(., var='peptide') %>% 
+      mutate(across(starts_with("Intensity."), ~{log2(1+.x)})) %>% ##should be log10 data...
+      column_to_rownames(., var='peptide')
+  return(exp_data)    
+  } else {
+    stop("Not an accepted functional annotation type.")
+  }}
+
+match_pathway_kegg <- function(df){
+  subset <- core_pep_kegg[core_pep_kegg$kegg %in% df$L3,]
+  subset <- subset$newpep_name
+  return(subset)
+} 
+match_pathway_cog <- function(df){
+  subset <- core_pep_cog[core_pep_cog$cog %in% df$cog,]
+  subset <- subset$newpep_name
+  return(subset)
+} 
+```
+
+```{r loadpeptides}
+peptide_file <- "peptides.txt"
+metadata_file <- "metadata.csv"
+peptides  <- read.delim(peptide_file, row.names = 1) %>% as.data.frame() %>% 
+  select(starts_with("Intensity."))
+metadata <- read.delim(metadata_file, header=F, sep=",")
+```
+
+```{r filteringpeptides}
+# Maintaining metadata is output from MetaLab
+# 1st columns as sample name, 2nd column as experiment name, 3rd column and after as grouping
+cond_options <- table(metadata[,3]) %>% as.data.frame()
+
+## filtering for Q50 
+cond_opts <- cond_options$Var1
+cond_count <- cond_options$Freq * 0.5
+
+exp_data <- filter_valids(peptides,
+                     conditions = cond_opts,
+                     min_count = cond_count,
+                     at_least_one = T)  
+```
+
+```{r logandnormalize}
+norm_pep <- estimateSizeFactorsForMatrix(exp_data) 
+norm_exp <- sweep(as.matrix(exp_data), 2, norm_pep, "/")
+log_data <- data.frame(norm_exp) %>% #dplyr::select(starts_with('Intensity')) %>%
+ # mutate_all(., funs(log2(1 + .)))
+  mutate(across(everything(), ~{log2(1+.x)}))
+```
+
+```{r matchcore}
+## intensities normalized by the proportion of functional annotation
+## if there are more than one functional annotation, the peptide will have a suffix added to the end (i.e. .1, .2, .3...etc)
+## $newpep_name
+
+matched_core_kegg <- data.frame(norm_exp) %>% 
+  rownames_to_column(., var='pep') %>%
+  merge(., core_pep_kegg, by='pep') %>% 
+  dplyr::mutate(prop=replace(prop, is.na(prop), 1)) %>%
+  dplyr::mutate(across(starts_with("Intensity."), ~{.x*prop})) %>% #update after mutate_at was depreciated
+  #mutate_at(funs(.*prop), starts_with("Intensity.")) %>% #multiplies the intensities by the proportion
+  column_to_rownames(., var='newpep_name') %>%
+  dplyr::select(starts_with("Intensity."))
+
+
+## need to add COG matches when Isaac is done
+exp_data_kegg <- expression_data('kegg')
+# removing "Intensity."
+colnames(exp_data_kegg) <- colnames(exp_data_kegg) %>% substr(., 11, nchar(.))
+```
+
+```{r matchpathway}
+# applying function over our pathway list
+# get custom peptide sets for this particular dataset 
+KEGG_pepsets <- lapply(pathway_kegg, match_pathway_kegg) 
+## when COG is ready
+#COG_genesets <- lapply(pathway_cog, match_pathway_cog) 
+```
+
+```{r gsva, include=FALSE}
+gsva_kegg <- gsva(as.matrix(exp_data_kegg),KEGG_pepsets, min.sz=10,
+                  kcdf='Gaussian') ## rnaseq=F because we have continuous data
+
+num_peptidesets <- nrow(gsva_kegg)
+#gsva_tofile <- gsva_kegg %>% as.data.frame %>% rownames_to_column("Pathways")
+```
+
+# Introduction to peptide-centric data analysis
+
+This report is completely based on **peptide** intensity values. The functional enrichment information is also peptide-centric as identified by pepFunk. 
+
+**To note**: Currently, functional enrichment by pepFunk is specific to the **human gut microbiome** because it uses a curated peptide database. PCA and hierarchical clustering uses all identified peptides and is appropriate for any sample type.  However, the enrichment results will only be accurate from human gut microbiome data. *If you'd like to use pepFunk for another system with your own peptide-centric functional database, please see the [Shiny app](https://shiny2.imetalab.ca/shiny/rstudio/pepFunk/)*. 
+
+In this report you will find:
+
+* A principal component analysis (PCA) biplot visualizing PC1 and PC2, the two components that explain the most variation in your dataset. 
+* A hierarchical clustering dendrogram visualizing the relationships between samples as explained by peptide intensity similarity. 
+* Various pepFunk heatmaps describing the molecular functional profiles of your human gut microbiome sample. 
+
+# Principal Component Analysis (PCA)
+
+PCA is a data exploration technique that can be used for quality control and pattern discovery.
+
+```{r pcasetup}
+numcond <- length(cond_opts)
+seqcond <- 1:numcond
+colours_to_plot <- lacroix_palette("Pamplemousse", n = numcond, type = "continuous")
+
+colnames(metadata) <- c("Samples", "Experiment", "Condition")
+conditions <- metadata$Condition
+
+pca<- prcomp(t(log_data), center=T, scale=F)
+sampleVals<-data.frame(pca$x)
+exprVals<-data.frame(pca$rotation)
+PoV <- (pca$sdev^2/sum(pca$sdev^2))*100
+
+
+coords<-data.frame(sampleVals, Condition = conditions,
+                   samplename = rownames(sampleVals))
+numPCs <- 1:length(PoV)
+
+for (i in 1:length(PoV)) {
+  percent <- paste0("(", round(PoV[i],2), "%)")
+  percentNoBrack <- paste0(round(PoV[i],2), "%")
+  name <- paste0("PC", i, "per")
+  name2 <- paste0("PC",i,"per_short")
+  assign(name, percent)
+  assign(name2, percentNoBrack)
+}
+```
+
+In this case, our report visualizes PC1 vs PC2. These are the two components that explain the most variation in this dataset (`r PC1per_short` and `r PC2per_short` respectively).
+
+```{r pcaplot}
+(pcaplot <- ggplot(coords, aes(x = PC1, y = PC2)) +
+    stat_ellipse(geom = "polygon", alpha=.2, aes(color=Condition, fill=Condition)) +
+    geom_point(size=5, aes(colour=Condition, shape=Condition)) + 
+    scale_color_manual(values=c(colours_to_plot)) +
+    scale_fill_manual(values=c(colours_to_plot)) +
+    scale_x_continuous(name= paste0("PC1", " ", PC1per))+ # labels depend on selected PCs
+    scale_y_continuous(name= paste0("PC2", " ", PC2per))+ theme_bw() +
+    theme(legend.position = "bottom", legend.title = element_blank(), text=element_text(size=12)) )
+
+```
+
+# Hierachical clustering
+
+Hierarchical clustering can also be used to visualize sample similarities.
+
+In this default plot we are using `euclidian` distance and the `complete` agglomeration hierachical clustering method.
+
+```{r hclust}
+
+dd <- dist(log_data %>% t(), method = "euclidian") # be able to chose distance
+hc <- hclust(dd, method = "complete") # be able to chose method
+condcolours <- data.frame(Condition = cond_opts, Colour = as.character(colours_to_plot))
+condcolours <- merge(metadata, condcolours, by = "Condition")
+
+colnames(log_data) <- colnames(log_data) %>% substr(., 11, nchar(.))
+dend <- log_data %>% t() %>% dist(method = "euclidian") %>% 
+  hclust(method = "complete") %>% as.dendrogram(hang=0.1) %>%
+  set("leaves_pch", 19) %>% 
+  set("leaves_col", as.character(condcolours$Colour), order_value = T) %>%
+  set('branches_lwd', 0.7) %>%
+  set('labels_cex', 0.7)
+
+#plot(dend)
+dend_ggplot <- as.ggdend(dend)
+ggplot(dend_ggplot, horiz=T, theme=theme_dendro(),  offset_labels = -10)
+
+```
+
+
+# Functional enrichment analysis
+
+## KEGG pathways
+
+```{r depathways, include=T}
+## this needs to be set by user in the report
+control_condition <- "DMSO"
+lowcond <- "Low"
+
+
+cond<- factor(metadata$Condition) %>% relevel(. , ref=control_condition) # DMSO is the control
+design <- model.matrix(~  cond) # you can also add other things here...
+colnames(design)[2:ncol(design)] <- substr(colnames(design)[2:ncol(design)], 5, 
+                                           nchar(colnames(design)[2:ncol(design)])) #just removing "cond"
+colnames(design)[1] <- control_condition
+fit <- lmFit(gsva_kegg, design)
+fit <- eBayes(fit, trend=T)
+res <- decideTests(fit, p.value=0.05, adjust="BH")
+results <- as.matrix(summary(res))[-2,-1]
+rownames(results) <- c("Positively enriched", "Negatively enriched")
+```
+
+There were **`r num_peptidesets` KEGG pathway peptide sets** identified in your data (with a minimum of 10 peptides per set).
+
+The following table describes the number of significantly enriched KEGG pathways in your dataset:
+
+`r knitr::kable(results, caption = "The number of significantly enriched KEGG pathways when compared to reference condition.", format = "html", table.attr = "style='width:30%;'") %>% kableExtra::kable_styling()`
+
+### A simple **heatmap** describing significantly different KEGG pathways when compared to a reference condition
+
+```{r sigplot, fig.width= 11,fig.height=6}
+res <- res %>% as.data.frame()
+
+##more than 2 conditions
+if (rownames(cond_options) > 2){
+sig_tests <- res[abs(res[,2:3]) %>% rowSums(.) > 0,]
+} else {## 2 conditions
+sig_tests <- res[abs(res[,2]) > 0,]
+}
+sig_gsva <- gsva_kegg[rownames(gsva_kegg) %in% rownames(sig_tests),]
+
+gsvaplot_data <- data.frame(gsva_kegg) %>% rownames_to_column(., var="Pathway") %>%
+  pivot_longer(!Pathway, names_to="Samples", values_to = "GSVA")
+gsvaplot_data <- gsvaplot_data %>% merge(., metadata, by="Samples")
+
+sig_gsvaplot_data <- data.frame(sig_gsva) %>% rownames_to_column(., var="Pathway") %>%
+  pivot_longer(!Pathway, names_to="Samples", values_to = "GSVA") %>%
+  merge(., metadata, by="Samples")
+
+# clustering pathways
+clusterdata <- rownames(gsva_kegg)[hclust(dist(gsva_kegg))$order]
+sig_gsvaplot_data$Pathway<- factor(sig_gsvaplot_data$Pathway, levels = clusterdata)
+
+# clustering samples
+clustersamples <- colnames(gsva_kegg)[hclust(dist(gsva_kegg %>% t()))$order]
+sig_gsvaplot_data$Samples<- factor(sig_gsvaplot_data$Samples, levels = clustersamples)
+
+
+sig_tests <- sig_tests %>% rownames_to_column(., var = "Pathway") %>%  
+  pivot_longer(!Pathway, names_to= "Condition", values_to = "significance")
+sig_gsvaplot_data <- sig_gsvaplot_data %>% merge(., sig_tests, by=c("Pathway", "Condition"))  %>%
+  dplyr::mutate(GSVA = ifelse(significance == 0 & Condition != control_condition, NA, GSVA))
+
+(sigplot <- ggplot(data = sig_gsvaplot_data, mapping = aes(x = Samples, y = Pathway, fill = GSVA)) + 
+    #facet_grid(~ Conditions, switch = "x", scales = "free_x", space = "free_x") +
+    facet_grid(~ Condition, switch = "x", scales = "free_x", space = "free_x") +
+    scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
+                         space = "Lab", name="GSVA enrichment score", na.value = "lightgrey") + 
+    geom_tile(na.rm = TRUE, color="white") +
+    xlab(label = "Sample") +
+    ylab(label="") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+```
+
+## All pathways
+
+Although less informative, all identified peptide gene sets and their accompanying GSVA scores are plotted below.
+
+### A simple **heatmap** describing all KEGG pathways identified in the dataset
+
+```{r ploteverthing, include=T, fig.width= 11,fig.height=10}
+gsvaplot_data$Pathway<- factor(gsvaplot_data$Pathway, levels = clusterdata)
+gsvaplot_data$Samples<- factor(gsvaplot_data$Samples, levels = clustersamples)
+
+
+(gsvaplot <- ggplot(data = gsvaplot_data, mapping = aes(x = Samples, y = Pathway, fill = GSVA)) + 
+    facet_grid(~ Condition, switch = "x", scales = "free_x", space = "free_x") +
+    scale_fill_gradientn(colours=c("#67A7C1","white","#FF6F59"),
+                         space = "Lab", name="GSVA enrichment score", na.value = "#64686F") + 
+    geom_tile(na.rm = TRUE, color="white") +
+    xlab(label = "Sample") +
+    ylab(label="") +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+
+```
